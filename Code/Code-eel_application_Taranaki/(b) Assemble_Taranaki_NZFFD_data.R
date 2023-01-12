@@ -18,8 +18,9 @@ rm(list=ls())
 #  Directories  #
 #################
 
-raw_data <- "./Data/raw_data"
-data_taranaki_dir <- "./Data/Taranaki"
+data_dir <- "./Data_processed"
+raw_data_dir <- "./Data_raw"
+data_taranaki_dir <- "./Data_processed/Taranaki"
 
 
 ##############
@@ -38,8 +39,8 @@ network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
 network_to_join <- network %>% filter(parent_s!=0, FWENZ_isLake!=TRUE) #This takes out lakes
 
 #Observations
-NZFFD_raw <- read.csv(file.path(raw_data, "nzffdms.csv")) # Downloaded from https://nzffdms.niwa.co.nz/search on 12/01/23
-#NZFFD_old <- read.csv(file.path(raw_data, "data-1665108945016.csv")) # Received from Jane Robbins on 7/10/22
+NZFFD_raw <- read.csv(file.path(raw_data_dir, "nzffdms.csv")) # Downloaded from https://nzffdms.niwa.co.nz/search on 12/01/23
+#NZFFD_old <- read.csv(file.path(raw_data_dir, "data-1665108945016.csv")) # Received from Jane Robbins on 7/10/22
 
 #table(NZFFD$y[NZFFD$y>=1967], NZFFD$m[NZFFD$y>=1967])
 
@@ -85,7 +86,7 @@ NZFFD <- NZFFD[-(which(NZFFD$nzsegment <=9)),]   #removing records that never go
 
 table(NZFFD$samplingMethod, useNA = "ifany")
 
-# fishingdat <- read.csv(file.path(raw_data, "Table of fishingmethods and factors.csv"))
+# fishingdat <- read.csv(file.path(raw_data_dir, "Table of fishingmethods and factors.csv"))
 # 
 # obs <- left_join(obs, fishingdat, by=c("fishmeth"="NZFFD.abbreviation"))
 # table(obs$Method.groupings, useNA = "ifany")
@@ -100,49 +101,6 @@ table(NZFFD$samplingMethod, useNA = "ifany")
 # # Keep only ef, net, trap and visual
 # obs <- obs %>% 
 #   filter(fishmeth=="Electric fishing" | fishmeth=="Net" | fishmeth=="Trap" | fishmeth=="Visual")
-
-
-# Keep only ef, net, trap and visual
-NZFFD <- NZFFD %>% 
-  filter(samplingMethod=="Electric fishing - Backpack" | #Electric fishing
-           samplingMethod=="Electric fishing - Bank generator or mains" |
-           samplingMethod=="Electric fishing - Boat" | 
-           samplingMethod=="Electric fishing - combination of nets and electric fishing" |
-           samplingMethod=="Electric fishing - combination of nets traps and electric fishing" |
-           samplingMethod=="Electric fishing - Combination of traps and electric fishing" | 
-           samplingMethod=="Electric fishing - Type unknown" |
-           
-           samplingMethod=="Fyke net - Fyke net including minifykes" | #Nets
-           samplingMethod=="Fyke net - Mini" |
-           samplingMethod=="Fyke net - Standard" |
-           samplingMethod=="Fyke net - Super" |
-           samplingMethod=="Other net - Drop" |
-           samplingMethod=="Other - hinaki" |
-           samplingMethod=="Other net - Hand net" |
-           samplingMethod=="Other net - Plankton" |
-           samplingMethod=="Other net - Push net" |
-           samplingMethod=="Other net - Seine" |
-           samplingMethod=="Other net - Set net" |
-           samplingMethod=="Other net - Unknown type of net" |
-           samplingMethod=="Other net - Whitebait" |
-           samplingMethod=="Other net - Whitebait scoop" |
-           samplingMethod=="Other net - Whitebait set" |
-           
-           samplingMethod=="Gill net - Multi mesh" | #Traps
-           samplingMethod=="Gill net - Single mesh" |
-           samplingMethod=="Gill net - Trammel" |
-           samplingMethod=="Traps - Bait trap (Killwell)"|
-           samplingMethod=="Traps - Box trap" |
-           samplingMethod=="Traps - combination of Kilwell and Gee minnow traps" |
-           samplingMethod=="Traps - Combination of traps" |
-           samplingMethod=="Traps - Fry trap" |
-           samplingMethod=="Traps - G minnow (coarse mesh, baited)" |
-           samplingMethod=="Traps - G minnow (coarse mesh, unbaited)" |
-           samplingMethod=="Traps - G minnow (fine mesh, baited)" |
-           samplingMethod=="Traps - G minnow (fine mesh, unbaited)" |
-           samplingMethod=="Traps - Gee minnow" |
-           samplingMethod=="Traps - Hoop trap" |
-           samplingMethod=="Traps - Unknown type of trap")
 
 # Set Method
 NZFFD$FishMethod <- ifelse(NZFFD$samplingMethod=="Electric fishing - Backpack" | #Electric fishing
@@ -183,6 +141,9 @@ NZFFD$FishMethod <- ifelse(NZFFD$samplingMethod=="Electric fishing - Backpack" |
                                            NZFFD$samplingMethod=="Traps - Hoop trap" |
                                            NZFFD$samplingMethod=="Traps - Unknown type of trap", "Trap", "Other")))
 
+table(NZFFD$FishMethod, useNA = "ifany")
+
+#Keep only ef, net, trap and visual
 NZFFD <- NZFFD %>% select(-c("samplingMethod")) %>% filter(FishMethod != "Other")
 
 
@@ -198,7 +159,10 @@ NZFFD <- NZFFD %>% select(-c("samplingMethod")) %>% filter(FishMethod != "Other"
 
 table(NZFFD$institution, useNA = "ifany")
 
-orgdat <- read.csv(file.path(raw_data, "organisation table and groupings.csv"))
+write_csv(data.frame("Names"=names(table(NZFFD$institution, useNA = "ifany"))), 
+          file = file.path(data_dir, "NZFFD_institutions.csv"))
+
+orgdat <- read.csv(file.path(raw_data_dir, "organisation table and groupings.csv"))
 
 obs <- left_join(obs, orgdat, by=c("org"="abbreviation"))
 table(obs$grouping, useNA = "ifany")

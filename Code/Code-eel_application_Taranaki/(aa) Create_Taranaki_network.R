@@ -17,10 +17,10 @@ rm(list=ls())
 #  Directories  #
 #################
 
-data_dir <- "./Data"
-raw_data <- "./Data/raw_data"
+data_dir <- "./Data_processed"
+raw_data_dir <- "./Data_raw"
 
-data_taranaki_dir <- "./Data/Taranaki"
+data_taranaki_dir <- "./Data_processed/Taranaki"
 dir.create(data_taranaki_dir, showWarnings=FALSE)
 
 fig_dir <- file.path(data_taranaki_dir, "Figures")
@@ -40,7 +40,7 @@ library(proj4)
 ##########################
 
 ## Raw REC network data
-load(file.path(raw_data, "REC2.4_variables.RData"))
+load(file.path(raw_data_dir, "REC2.4_variables.RData"))
 network_raw <- REC2.4 ; rm(REC2.4)
 
 #Covariates used in the Ngai Tahu study, perhaps reassess later ??

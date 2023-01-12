@@ -14,10 +14,9 @@ library(readxl)
 ##   Directories   ##
 #####################
 
-data_dir <- "./Data"
-raw_data_dir <- "./Data/raw_data"
-data_taranaki_dir <- "./Data/Taranaki"
-fig_dir <- file.path(data_taranaki_dir, "Figures")
+data_dir <- "./Data_processed"
+data_taranaki_dir <- "./Data_processed/Taranaki"
+fig_dir <- "./Data_processed/Taranaki/Figures"
 
 
 #######################

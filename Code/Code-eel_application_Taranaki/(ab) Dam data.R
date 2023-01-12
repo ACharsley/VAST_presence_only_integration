@@ -10,9 +10,9 @@ library(readxl)
 ##   Directories   ##
 #####################
 
-data_dir <- "./Data"
-raw_data_dir <- "./Data/raw_data"
-data_taranaki_dir <- "./Data/Taranaki"
+data_dir <- "./Data_processed"
+raw_data_dir <- "./Data_raw"
+data_taranaki_dir <- "./Data_processed/Taranaki"
 fig_dir <- file.path(data_taranaki_dir, "Figures")
 
 
@@ -21,7 +21,7 @@ fig_dir <- file.path(data_taranaki_dir, "Figures")
 ######################
 
 ## Load network to extract habitat covariates
-network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
+network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network_aa.rds"))
 
 network$DSDamAffected <- factor(network$DSDamAffected)
 
@@ -108,7 +108,7 @@ while(GO){ #Go until convergence
 }
 
 
-write_csv(damhere, path = file.path(data_taranaki_dir, "Taranaki_dam_locations.csv"))
+write_csv(damhere, file = file.path(data_taranaki_dir, "Taranaki_dam_locations.csv"))
 
 
 # network_3 = network %>% 
