@@ -1,0 +1,227 @@
+###################################################
+##           Generate pseudo-absence data        ##
+##             for the Taranaki region           ##
+##                                               ##
+##               Anthony Charsley                ##
+##                November 2022                  ##
+###################################################
+
+# This code generates pseudo-absence data.
+
+# Generate pseudo-absence data by:
+#   
+#   1. Random generation (at locations in the stream network without presence observations)
+#   2. Spatially biased generation to simulate 'true' absence data (within 2km of a road)
+#   3. Habitat unsuitability (at locations not suitable or less suitable for eels)
+# 
+# For each year of data, generate:
+#   a. As many as the presence-only data
+#   b. Twice as many as the presence-only data
+#   c. 5x as many as the presence-only data
+#   d. 10x as many as the presence-only data (we want this to be ~10,000 data points (recommended by Barbet-Massin et al (2012))
+
+
+###########################################
+
+rm(list=ls())
+
+
+##############
+#  Packages  #
+##############
+
+library(tidyverse)
+library(sf)
+library(units)
+
+
+#################
+#  Directories  #
+#################
+
+data_dir <- "./Data"
+raw_data <- "./Data/raw_data"
+data_taranaki_dir <- "./Data/Taranaki"
+fig_dir <- "./Data/Taranaki/Figures"
+
+pseudoabsence_data_dir <- file.path(data_taranaki_dir, "Pseudo_absence_data")
+dir.create(pseudoabsence_data_dir, showWarnings = F)
+
+###################
+#  Load datasets  #
+###################
+
+##Network
+network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
+network_to_sample <- network %>% filter(parent_s!=0, FWENZ_isLake!=TRUE)
+
+##NZFFD observations
+NZFFD_data <- readRDS(file.path(data_taranaki_dir, "Taranaki_NZFFD_obs.rds"))
+
+##presence-only data
+
+#years_to_sample <- unique(presence_only_data$year)[order(unique(presence_only_data$year))]
+years_to_sample <- c(2010:2021) #use this for testing
+
+
+
+
+##Road data
+NZ_roads_data <- read_sf(dsn = raw_data, layer = "nz-primary-road-parcels") #Data extracted on 14/11/22 from https://data.linz.govt.nz/layer/50796-nz-primary-road-parcels/
+
+#Extract coordinates
+NZ_roads_coords <- as.data.frame(sf::st_coordinates(NZ_roads_data)) %>% select(X,Y) %>% rename("Lat"=Y, "Lon"=X)
+NZ_roads_coords <- st_as_sf(NZ_roads_coords, coords = c("Lon","Lat"), crs = 4326, agr = "constant") #Save as sf object
+NZ_roads_coords <- st_transform(NZ_roads_coords, 3857) #Ensure I'm using the correct projection for distance calcs
+
+
+
+##############################
+#  Format network_to_sample  #
+##############################
+
+#Ensure variables are the same as NZFFD variables
+network_to_sample <- network_to_sample %>% 
+  select("nzsegment","Lat","Lon","child_s","parent_s","dist_s","CatName") %>%
+  rename("child_i" = "child_s",
+         "parent_i" = "parent_s",
+         "dist_i" = "dist_s",
+         "catchname" = "CatName") %>%
+  mutate("Year" = NA, #Figure out what to do with year
+         "angdie" = 0,
+         "angaus" = 0,
+         "fishmeth" = NA,
+         "org" = NA) %>%
+  arrange("nzsegment","Lat","Lon","child_i","parent_i","dist_i","Year", "catchname",
+          "angdie","angaus","fishmeth","org")
+
+
+##################################
+#  Generate pseudo-absence data  #
+##################################
+
+########################
+# 1. Random generation
+########################
+
+sample_1a = sample_1b = sample_1c = sample_1d = list()
+
+set.seed(141122)
+
+#Loop over all the years in the presence-only data
+for(i in c(1:length(years_to_sample))){
+  
+  print(i)
+  
+  
+  #Remove NZFFD locations for year of interest
+  to_remove <- NZFFD_data$child_i[NZFFD_data$Year == years_to_sample[i] & NZFFD_data$angdie == 1]
+  
+  #Remove presence-only locations for all years except the year of interest
+  #ADD CODE HERE
+  
+  
+  #If there is data in that year take a sample, if not no pseudo-absence data for that year
+  if(length(to_remove)>0){
+    
+    data_to_sample <- network_to_sample %>% 
+      filter(!(child_i %in% to_remove))
+    
+    n <- 100 #length of presence-only data for year of interest - CHANGE CODE 
+    
+    ## a. As many as the presence-only data
+    sample_1a[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
+    
+    ## b. Twice as many as the presence-only data
+    sample_1b[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*2),]
+    
+    ## c. 5x as many as the presence-only data
+    sample_1c[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*5),]
+    
+    ## d. 10x as many as the presence-only data
+    sample_1d[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*10),]
+    
+  }
+}
+
+#Combine data sets
+sample_1a <- do.call(rbind, sample_1a)
+sample_1b <- do.call(rbind, sample_1b)
+sample_1c <- do.call(rbind, sample_1c)
+sample_1d <- do.call(rbind, sample_1d)
+
+
+
+
+# #################################
+# # 2. Spatially biased generation
+# #################################
+# 
+# ##Network saved as SF object for 'closest distance to road' calculations
+# network_to_sample_SF <- st_as_sf(network_to_sample, coords = c("Lon","Lat"), crs = 4326, agr = "constant") #Save as sf object for use later
+# network_to_sample_SF <- st_transform(network_to_sample_SF, 3857) #Ensure I'm using the correct projection for distance calcs
+# 
+# #Calculate distance to nearest road
+# idx <- st_nearest_feature(network_to_sample_SF, NZ_roads_coords)
+# network_to_sample_SF$distance_to_road <- st_distance(network_to_sample_SF, NZ_roads_coords[idx,], by_element = TRUE)
+# 
+# summary(network_to_sample_SF$distance_to_road/1000)
+# 
+# #Convert to km and drop units
+# network_to_sample_SF$distance_to_road_km <- drop_units(network_to_sample_SF$distance_to_road)/1000
+# 
+# #Subset data by distance to road, must be less than 2km away from road
+# network_to_sample_SF <- network_to_sample_SF %>% filter(distance_to_road_km < 2)
+# 
+# ## Set final dataset I want to sample from
+# network_to_sample_roadbias <- network_to_sample %>% filter(child_i %in% network_to_sample_SF$child_i)
+# 
+# 
+# set.seed(141122)
+# 
+# ## a. As many as the presence-only data
+# sample_2a <- network_to_sample_roadbias[sample(c(1:nrow(network_to_sample_roadbias)), n),]
+# 
+# ## b. Twice as many as the presence-only data
+# sample_2b <- network_to_sample_roadbias[sample(c(1:nrow(network_to_sample_roadbias)), n*2),]
+# 
+# ## c. 5x as many as the presence-only data
+# sample_2c <- network_to_sample_roadbias[sample(c(1:nrow(network_to_sample_roadbias)), n*5),]
+# 
+# ## d. 10x as many as the presence-only data
+# sample_2d <- network_to_sample_roadbias[sample(c(1:nrow(network_to_sample_roadbias)), n*10),]
+
+
+
+
+##############################
+#  Save pseudo-absence data  #
+##############################
+
+#Save randomly generated data
+#a.
+saveRDS(sample_1a, file.path(pseudoabsence_data_dir, "Random_sample_1a.rds"))
+
+#b.
+saveRDS(sample_1b, file.path(pseudoabsence_data_dir, "Random_sample_1b.rds"))
+
+#c.
+saveRDS(sample_1c, file.path(pseudoabsence_data_dir, "Random_sample_1c.rds"))
+
+#d.
+saveRDS(sample_1d, file.path(pseudoabsence_data_dir, "Random_sample_1d.rds"))
+
+
+# #Save spatially biased data
+# 
+# #a.
+# saveRDS(sample_2a, file.path(pseudoabsence_data_dir, "Spatially_biased_sample_2a.rds"))
+# 
+# #b.
+# saveRDS(sample_2b, file.path(pseudoabsence_data_dir, "Spatially_biased_sample_2b.rds"))
+# 
+# #c.
+# saveRDS(sample_2c, file.path(pseudoabsence_data_dir, "Spatially_biased_sample_2c.rds"))
+# 
+# #d.
+# saveRDS(sample_2d, file.path(pseudoabsence_data_dir, "Spatially_biased_sample_2d.rds"))

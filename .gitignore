@@ -37,3 +37,12 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+
+#My folders to ignore
+Analyses/
+Data_processed/
+Data_raw/
+
+
+
