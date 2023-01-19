@@ -52,6 +52,7 @@ NZFFD_raw <- read.csv(file.path(raw_data_dir, "nzffdms.csv")) # Downloaded from 
 
 names(NZFFD_raw)
 
+# These variables may be needed so keep for now
 NZFFD <- NZFFD_raw %>%
   select(nzffdRecordNumber, eventDate, institution, samplingPurpose, waterBody, catchmentNumber, catchmentName,
          eastingNZTM, northingNZTM, decimalLongitude, decimalLatitude, recSegment, 
@@ -78,6 +79,9 @@ NZFFD <- NZFFD %>% rename("nzsegment" = "recSegment")
 
 #Ensure the REC segments are correct
 NZFFD <- NZFFD[-(which(NZFFD$nzsegment <=9)),]   #removing records that never got assigned NZreach numbers
+
+#Remove records without an nzsegment identifier
+NZFFD <- NZFFD %>% filter(!is.na(nzsegment))
 
 
 ##########################
@@ -143,15 +147,15 @@ NZFFD$FishMethod <- ifelse(NZFFD$samplingMethod=="Electric fishing - Backpack" |
 
 table(NZFFD$FishMethod, useNA = "ifany")
 
-#Keep only ef, net, trap and visual
-NZFFD <- NZFFD %>% select(-c("samplingMethod")) %>% filter(FishMethod != "Other")
+# NZFFD_TRC <- NZFFD %>% 
+#   filter(institution == "Taranaki Regional Council") %>% 
+#   select("nzffdRecordNumber", "Year", "eventDate", "institution", "samplingPurpose", "waterBody",
+#          "catchmentNumber", "catchmentName", "decimalLongitude", "decimalLatitude", "nzsegment",
+#          "taxonName","totalCount", "present", "minLength", "maxLength", "FishMethod")
+# 
+# 
+# write_csv(NZFFD_TRC, file.path(data_taranaki_dir, "NZFFD_TRC.csv"))
 
-
-
-
-
-
-## NEED TO FIX BELOW: ##
 
 ########################
 # Fixing organisations #
@@ -162,25 +166,85 @@ table(NZFFD$institution, useNA = "ifany")
 write_csv(data.frame("Names"=names(table(NZFFD$institution, useNA = "ifany"))), 
           file = file.path(data_dir, "NZFFD_institutions.csv"))
 
-orgdat <- read.csv(file.path(raw_data_dir, "organisation table and groupings.csv"))
+#Read organisation data with grouping information
+orgdat <- read.csv(file.path(raw_data_dir, "organisation table and groupings_v2.csv"))
 
-obs <- left_join(obs, orgdat, by=c("org"="abbreviation"))
-table(obs$grouping, useNA = "ifany")
+#Join NZFFD data and organisation information
+NZFFD <- left_join(NZFFD, orgdat, by=c("institution"="name"))
+table(NZFFD$grouping, useNA = "ifany")
 
-obs <- obs %>%
-  select(-c(org, name, description)) %>% 
+NZFFD <- NZFFD %>%
+  select(-c(abbreviation, description)) %>% 
   rename("org"=grouping) 
 
 # #remove individuals, unknowns and nas
 # obs <- obs %>%
 #   filter(org!="individuals" & org!="unk" & org!="unknown" & !is.na(org))
+# orgdat <- read.csv(file.path(raw_data_dir, "organisation table and groupings.csv"))
+# 
+# obs <- left_join(obs, orgdat, by=c("org"="abbreviation"))
+# table(obs$grouping, useNA = "ifany")
+# 
+# obs <- obs %>%
+#   select(-c(org, name, description)) %>% 
+#   rename("org"=grouping) 
+# 
+# # #remove individuals, unknowns and nas
+# # obs <- obs %>%
+# #   filter(org!="individuals" & org!="unk" & org!="unknown" & !is.na(org))
+# 
+# #Keep only consultants, council, doc, fish&game, niwa and university (removed the rest as they had less than 30 observations or org was NA)
+# obs <- obs %>%
+#   filter(org=="consultants" | org=="council" | org=="doc" | org=="fish&game" | org=="niwa" | org=="university")
 
-#Keep only consultants, council, doc, fish&game, niwa and university (removed the rest as they had less than 30 observations or org was NA)
-obs <- obs %>%
-  filter(org=="consultants" | org=="council" | org=="doc" | org=="fish&game" | org=="niwa" | org=="university")
+
+################
+# Data to keep #
+################
 
 
+#1. Subset by area and join REC (this automatically subsets to Taranaki region as network_to_join only has Taranaki data)
+NZFFD_REC_joined <- inner_join(NZFFD, network_to_join, by="nzsegment")
 
+
+#2. Select variables to keep
+NZFFD_REC_joined <- NZFFD_REC_joined %>% 
+  select(nzffdRecordNumber, nzsegment, Lat, Lon, catchmentName, catchmentNumber, #Variables related to identifability and location
+         child_s, parent_s, dist_s, #variables derived for stream network modelling
+         Year, org, FishMethod, #variables specific to sampling
+         EfmNumberOfPasses, EfmMinutes, EfmArea, NetsTrapsTotalNumber, #variables related to sampling effort
+         NetsTrapsBaited, NetsTrapsMeshSize, NetsTrapsDayNight,NetsTrapsAverageSetTime,
+         taxonName, taxonCommonName, taxonRemarks, totalCount, present, #fish species present, count variables
+         minLength, maxLength) %>% # fish remarks
+  rename("child_i"=child_s, "parent_i"=parent_s, "dist_i"=dist_s) #%>%
+#filter(Year >= 1967) #To capture only data from 1967 to present
+
+#relocate
+NZFFD_REC_joined <- NZFFD_REC_joined %>%
+  relocate(nzffdRecordNumber, nzsegment, Lat, Lon, catchmentName, catchmentNumber, #Variables related to identifability and location
+           child_i, parent_i, dist_i, #variables derived for stream network modelling
+           Year, org, FishMethod, #variables specific to sampling
+           EfmNumberOfPasses, EfmMinutes, EfmArea, NetsTrapsTotalNumber, #variables related to sampling effort
+           NetsTrapsBaited, NetsTrapsMeshSize, NetsTrapsDayNight,NetsTrapsAverageSetTime,
+           taxonName, taxonCommonName, taxonRemarks, totalCount, present, #fish species present, count variables
+           minLength, maxLength)
+
+
+#3. Subset by fishing method
+#Keep only ef, net, trap and visual
+NZFFD_REC_joined <- NZFFD_REC_joined %>% filter(FishMethod != "Other")
+
+
+#4. Subset by organisation
+table(NZFFD_REC_joined$org, useNA = "ifany")
+
+#Keep all but individuals (sampling protocols unlikely followed), unknown (cannot verify sampler) and NA (cannot verify sampler)
+NZFFD_REC_joined <- NZFFD_REC_joined %>%
+  filter(!(org=="individuals" | org=="unknown" | is.na(org)))
+
+
+#Examine missingness
+colSums(is.na(NZFFD_REC_joined))
 
 # ########################################################
 # #  Sorting out NZFFD records into single rows/NZreach  #
@@ -206,6 +270,8 @@ obs <- obs %>%
 # 
 # rm(tmp,res)
 
+
+## Continue from here: ##
 
 ##################################
 # Encounter / non-encounter data #
@@ -240,18 +306,7 @@ rm(tmp,res)
 
 
 
-##############
-#  Join REC  #
-##############
 
-obs <- inner_join(DATA, network_to_join, by="nzsegment")
-
-obs <- obs %>% select(nzsegment, Lat, Lon, child_s, parent_s, dist_s, y, catchname, org, fishmeth, effort, pass, 
-                      angdie, angaus) %>% #All fish species
-  rename("child_i"=child_s, "parent_i"=parent_s, "dist_i"=dist_s, "Year"=y) #%>%
-#filter(Year >= 1967) #To capture only data from 1967 to present
-
-colSums(is.na(obs))
 
 
 ###############

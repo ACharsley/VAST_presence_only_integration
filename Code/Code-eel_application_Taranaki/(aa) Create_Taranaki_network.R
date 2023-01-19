@@ -33,11 +33,15 @@ dir.create(fig_dir, showWarnings=FALSE)
 
 library(tidyverse)
 library(proj4)
+# library(sf)
 
 
 ##########################
 #  Load and filter data  #
 ##########################
+
+#Can use updated data:
+# network_raw <- read_sf(dsn = file.path(raw_data_dir, "REC2_geodata_version_5", "nzRec2_v5.gdb")) #Data extracted on 19/01/23 from https://niwa.co.nz/freshwater/management-tools/river-environment-classification-0
 
 ## Raw REC network data
 load(file.path(raw_data_dir, "REC2.4_variables.RData"))
