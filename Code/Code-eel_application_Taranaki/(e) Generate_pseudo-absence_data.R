@@ -39,13 +39,14 @@ library(units)
 #  Directories  #
 #################
 
-data_dir <- "./Data"
-raw_data <- "./Data/raw_data"
-data_taranaki_dir <- "./Data/Taranaki"
-fig_dir <- "./Data/Taranaki/Figures"
+data_dir <- "./Data_processed"
+raw_data_dir <- "./Data_raw"
+data_taranaki_dir <- "./Data_processed/Taranaki"
+fig_dir <- "./Data_processed/Taranaki/Figures"
 
 pseudoabsence_data_dir <- file.path(data_taranaki_dir, "Pseudo_absence_data")
 dir.create(pseudoabsence_data_dir, showWarnings = F)
+
 
 ###################
 #  Load datasets  #
@@ -55,24 +56,22 @@ dir.create(pseudoabsence_data_dir, showWarnings = F)
 network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
 network_to_sample <- network %>% filter(parent_s!=0, FWENZ_isLake!=TRUE)
 
-##NZFFD observations
-NZFFD_data <- readRDS(file.path(data_taranaki_dir, "Taranaki_NZFFD_obs.rds"))
+##NZFFD presence/absence data
+NZFFD_data <- readRDS(file.path(data_taranaki_dir, "Taranaki_NZFFD_pa_data.rds"))
 
 ##presence-only data
+presence_only_lf_data <- readRDS(file.path(data_taranaki_dir, "Taranaki_presence_only_lf_data.rds"))
 
-#years_to_sample <- unique(presence_only_data$year)[order(unique(presence_only_data$year))]
-years_to_sample <- c(2010:2021) #use this for testing
-
-
+years_to_sample <- unique(presence_only_lf_data$Year)[order(unique(presence_only_lf_data$Year))]
 
 
-##Road data
-NZ_roads_data <- read_sf(dsn = raw_data, layer = "nz-primary-road-parcels") #Data extracted on 14/11/22 from https://data.linz.govt.nz/layer/50796-nz-primary-road-parcels/
-
-#Extract coordinates
-NZ_roads_coords <- as.data.frame(sf::st_coordinates(NZ_roads_data)) %>% select(X,Y) %>% rename("Lat"=Y, "Lon"=X)
-NZ_roads_coords <- st_as_sf(NZ_roads_coords, coords = c("Lon","Lat"), crs = 4326, agr = "constant") #Save as sf object
-NZ_roads_coords <- st_transform(NZ_roads_coords, 3857) #Ensure I'm using the correct projection for distance calcs
+# ##Road data
+# NZ_roads_data <- read_sf(dsn = raw_data, layer = "nz-primary-road-parcels") #Data extracted on 14/11/22 from https://data.linz.govt.nz/layer/50796-nz-primary-road-parcels/
+# 
+# #Extract coordinates
+# NZ_roads_coords <- as.data.frame(sf::st_coordinates(NZ_roads_data)) %>% select(X,Y) %>% rename("Lat"=Y, "Lon"=X)
+# NZ_roads_coords <- st_as_sf(NZ_roads_coords, coords = c("Lon","Lat"), crs = 4326, agr = "constant") #Save as sf object
+# NZ_roads_coords <- st_transform(NZ_roads_coords, 3857) #Ensure I'm using the correct projection for distance calcs
 
 
 
@@ -115,7 +114,7 @@ for(i in c(1:length(years_to_sample))){
   
   
   #Remove NZFFD locations for year of interest
-  to_remove <- NZFFD_data$child_i[NZFFD_data$Year == years_to_sample[i] & NZFFD_data$angdie == 1]
+  to_remove <- NZFFD_data$child_i[NZFFD_data$Year == years_to_sample[i] & NZFFD_data$`Anguilla dieffenbachii` == 1]
   
   #Remove presence-only locations for all years except the year of interest
   #ADD CODE HERE

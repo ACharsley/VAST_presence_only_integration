@@ -18,8 +18,9 @@ rm(list=ls())
 #  Directories  #
 #################
 
-raw_data <- "./Data/raw_data"
-data_taranaki_dir <- "./Data/Taranaki"
+data_dir <- "./Data_processed"
+raw_data_dir <- "./Data_raw"
+data_taranaki_dir <- "./Data_processed/Taranaki"
 
 fig_dir <- file.path(data_taranaki_dir, "Figures")
 
@@ -51,7 +52,7 @@ network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
 REC_covs <- c('Shade', 'Substrate', 'Slope', 'AveTWarm', 'Dist2Coast', 'DSDist2Lake')
 
 #Set years
-yrs <- c(1978:2021)
+yrs <- c(1966:2021) #Use all these years for now but will remove some later
 
 ###############################
 
@@ -72,7 +73,7 @@ hab_REC_full[hab_REC_full$FWENZ_isLake==TRUE, 'DSDist2Lake'] <- 0
 #Remove FWENZ_isLake variable
 hab_REC_full <- hab_REC_full %>% select(-c("FWENZ_isLake"))
 
-#Some missing in Shade covariate
+#Some missing
 sapply(1:ncol(hab_REC_full), function(x) length(which(is.na(hab_REC_full[,x])))/nrow(hab_REC_full))
 
 ###############################

@@ -3,7 +3,7 @@
 ##           for the Taranaki region             ##
 ##                                               ##
 ##               Anthony Charsley                ##
-##                November 2022                  ##
+##                January 2023                   ##
 ###################################################
 
 # This code assembles presence/absence 
@@ -72,13 +72,13 @@ NZFFD <- NZFFD_raw %>%
 #Ensure there is a year variable
 NZFFD$Year <- as.numeric(substr(NZFFD$eventDate, start = 1, stop = 4))
 NZFFD <- NZFFD %>% relocate(Year, .after = nzffdRecordNumber)
-NZFFD <- NZFFD[-(which(is.na(NZFFD$Year))),]     #checked these NA in the original NZFFD and they are true missing dates, so they are removed here
+NZFFD <- NZFFD[-(which(is.na(NZFFD$Year))),]
 
 #Rename REC segments
 NZFFD <- NZFFD %>% rename("nzsegment" = "recSegment")
 
 #Ensure the REC segments are correct
-NZFFD <- NZFFD[-(which(NZFFD$nzsegment <=9)),]   #removing records that never got assigned NZreach numbers
+NZFFD <- NZFFD[-(which(NZFFD$nzsegment <=9)),]   #removing records that never got assigned nzsegment numbers
 
 #Remove records without an nzsegment identifier
 NZFFD <- NZFFD %>% filter(!is.na(nzsegment))
@@ -89,22 +89,6 @@ NZFFD <- NZFFD %>% filter(!is.na(nzsegment))
 ##########################
 
 table(NZFFD$samplingMethod, useNA = "ifany")
-
-# fishingdat <- read.csv(file.path(raw_data_dir, "Table of fishingmethods and factors.csv"))
-# 
-# obs <- left_join(obs, fishingdat, by=c("fishmeth"="NZFFD.abbreviation"))
-# table(obs$Method.groupings, useNA = "ifany")
-# 
-# obs <- obs %>%
-#   select(-c(fishmeth, Method.Description)) %>% 
-#   rename("fishmeth"=Method.groupings) 
-# 
-# table(obs$angdie, obs$fishmeth)
-# table(obs$angaus, obs$fishmeth)
-# 
-# # Keep only ef, net, trap and visual
-# obs <- obs %>% 
-#   filter(fishmeth=="Electric fishing" | fishmeth=="Net" | fishmeth=="Trap" | fishmeth=="Visual")
 
 # Set Method
 NZFFD$FishMethod <- ifelse(NZFFD$samplingMethod=="Electric fishing - Backpack" | #Electric fishing
@@ -146,7 +130,9 @@ NZFFD$FishMethod <- ifelse(NZFFD$samplingMethod=="Electric fishing - Backpack" |
                                            NZFFD$samplingMethod=="Traps - Unknown type of trap", "Trap", "Other")))
 
 table(NZFFD$FishMethod, useNA = "ifany")
+#table(NZFFD$FishMethod, NZFFD$samplingMethod, useNA = "ifany") #use this to check - creates big table
 
+#This code was run to examine TRC data when in contact with TRC (20/01/23)
 # NZFFD_TRC <- NZFFD %>% 
 #   filter(institution == "Taranaki Regional Council") %>% 
 #   select("nzffdRecordNumber", "Year", "eventDate", "institution", "samplingPurpose", "waterBody",
@@ -163,39 +149,21 @@ table(NZFFD$FishMethod, useNA = "ifany")
 
 table(NZFFD$institution, useNA = "ifany")
 
-write_csv(data.frame("Names"=names(table(NZFFD$institution, useNA = "ifany"))), 
-          file = file.path(data_dir, "NZFFD_institutions.csv"))
+#Ran this to get a list of institutions to match up with groupings (and therefore creating "organisation table and groupings_v2.csv")
+# write_csv(data.frame("Names"=names(table(NZFFD$institution, useNA = "ifany"))), 
+#           file = file.path(data_dir, "NZFFD_institutions.csv"))
 
 #Read organisation data with grouping information
 orgdat <- read.csv(file.path(raw_data_dir, "organisation table and groupings_v2.csv"))
 
 #Join NZFFD data and organisation information
 NZFFD <- left_join(NZFFD, orgdat, by=c("institution"="name"))
+
 table(NZFFD$grouping, useNA = "ifany")
 
 NZFFD <- NZFFD %>%
   select(-c(abbreviation, description)) %>% 
   rename("org"=grouping) 
-
-# #remove individuals, unknowns and nas
-# obs <- obs %>%
-#   filter(org!="individuals" & org!="unk" & org!="unknown" & !is.na(org))
-# orgdat <- read.csv(file.path(raw_data_dir, "organisation table and groupings.csv"))
-# 
-# obs <- left_join(obs, orgdat, by=c("org"="abbreviation"))
-# table(obs$grouping, useNA = "ifany")
-# 
-# obs <- obs %>%
-#   select(-c(org, name, description)) %>% 
-#   rename("org"=grouping) 
-# 
-# # #remove individuals, unknowns and nas
-# # obs <- obs %>%
-# #   filter(org!="individuals" & org!="unk" & org!="unknown" & !is.na(org))
-# 
-# #Keep only consultants, council, doc, fish&game, niwa and university (removed the rest as they had less than 30 observations or org was NA)
-# obs <- obs %>%
-#   filter(org=="consultants" | org=="council" | org=="doc" | org=="fish&game" | org=="niwa" | org=="university")
 
 
 ################
@@ -211,19 +179,18 @@ NZFFD_REC_joined <- inner_join(NZFFD, network_to_join, by="nzsegment")
 NZFFD_REC_joined <- NZFFD_REC_joined %>% 
   select(nzffdRecordNumber, nzsegment, Lat, Lon, catchmentName, catchmentNumber, #Variables related to identifability and location
          child_s, parent_s, dist_s, #variables derived for stream network modelling
-         Year, org, FishMethod, #variables specific to sampling
+         Year, org, institution, FishMethod, #variables specific to sampling (NOTE: institution kept as it is needed later)
          EfmNumberOfPasses, EfmMinutes, EfmArea, NetsTrapsTotalNumber, #variables related to sampling effort
          NetsTrapsBaited, NetsTrapsMeshSize, NetsTrapsDayNight,NetsTrapsAverageSetTime,
          taxonName, taxonCommonName, taxonRemarks, totalCount, present, #fish species present, count variables
          minLength, maxLength) %>% # fish remarks
-  rename("child_i"=child_s, "parent_i"=parent_s, "dist_i"=dist_s) #%>%
-#filter(Year >= 1967) #To capture only data from 1967 to present
+  rename("child_i"=child_s, "parent_i"=parent_s, "dist_i"=dist_s)
 
 #relocate
 NZFFD_REC_joined <- NZFFD_REC_joined %>%
   relocate(nzffdRecordNumber, nzsegment, Lat, Lon, catchmentName, catchmentNumber, #Variables related to identifability and location
            child_i, parent_i, dist_i, #variables derived for stream network modelling
-           Year, org, FishMethod, #variables specific to sampling
+           Year, org, institution, FishMethod, #variables specific to sampling
            EfmNumberOfPasses, EfmMinutes, EfmArea, NetsTrapsTotalNumber, #variables related to sampling effort
            NetsTrapsBaited, NetsTrapsMeshSize, NetsTrapsDayNight,NetsTrapsAverageSetTime,
            taxonName, taxonCommonName, taxonRemarks, totalCount, present, #fish species present, count variables
@@ -246,42 +213,93 @@ NZFFD_REC_joined <- NZFFD_REC_joined %>%
 #Examine missingness
 colSums(is.na(NZFFD_REC_joined))
 
-# ########################################################
-# #  Sorting out NZFFD records into single rows/NZreach  #
-# ########################################################
-# 
-# NZFFD <- NZFFD[-(which(is.na(NZFFD$y))),]     #checked these NA in the original NZFFD and they are true missing dates, so they are removed here
-# NZFFD <- NZFFD[-(which(NZFFD$nzreach <=9)),]   #removing records that never got assigned NZreach numbers
-# 
-# DATA <- NZFFD[!duplicated(NZFFD$card),]
-# SPECIES<-unique(NZFFD$spcode)
-# tmp<-split(NZFFD$spcode,NZFFD$card)
-# 
-# res <- lapply(tmp,function(x) match(SPECIES,x,nomatch=0)>0)
-# res <- do.call("rbind",res)
-# res <- data.frame(res)
-# names(res) <- SPECIES
-# 
-# DATA <- DATA[order(DATA$card),]
-# DATA<-cbind(DATA,res)
-# 
-# nrow(DATA)
-# length(unique(DATA$card))
-# 
-# rm(tmp,res)
+
+##########################
+# Create effort variable #
+##########################
+
+## This needs to be one per nzffdRecordNumber i.e., fishing occasion 
+## (also important so that it makes sense when encounter/non-encounter data is made)
 
 
-## Continue from here: ##
+##also use min/max length here 
+
+
+
+###########################
+# Abundance data from TRC #
+###########################
+
+#Build TRC abundance data
+NZFFD_abund_TRC <- NZFFD_REC_joined %>% #This is data that is collected by TRC and is NOT NA in total count
+  filter((institution=="Taranaki Regional Council" & !is.na(totalCount)))
+
+#check:
+table(NZFFD_abund_TRC$institution, is.na(NZFFD_abund_TRC$totalCount))
+
+table(NZFFD_abund_TRC$FishMethod, useNA = "ifany")
+
+table(NZFFD_abund_TRC$taxonName)
+
+
+#when longfin eel weren't found, it doesn't necessarily mean they weren't present, for example
+#another target species could have been of interest
+
+
+#Subset data to keep only longfin eel data
+NZFFD_abund_TRC_lf <- NZFFD_abund_TRC %>% 
+  filter(taxonName == "Anguilla dieffenbachii")
+
+#Examine data
+table(NZFFD_abund_TRC_lf$Year)
+
+
+#Check if each sampling event is unique or if any need to be combined
+length(unique(NZFFD_abund_TRC_lf$nzffdRecordNumber))
+nrow(NZFFD_abund_TRC_lf)
+## Both equal so ok
+
+
+#Keep only variables of interest
+colnames(NZFFD_abund_TRC_lf)
+NZFFD_abund_TRC_lf <- NZFFD_abund_TRC_lf %>%
+  select(nzffdRecordNumber, nzsegment, Lat, Lon, catchmentName, catchmentNumber, #Variables related to identifability and location
+         child_i, parent_i, dist_i, #variables derived for stream network modelling
+         Year, org, institution, FishMethod, #variables specific to sampling
+         #Put an effort variable here
+         taxonName, totalCount) #longfin eel count
+
 
 ##################################
 # Encounter / non-encounter data #
 ##################################
 
-# Sorting out NZFFD records into single records
+#Build p/a data 
+NZFFD_pa <- NZFFD_REC_joined %>%  #we assume these nzffdRecordNumber's are when abundance sampling was conducted
+  filter(!(nzffdRecordNumber%in% NZFFD_abund_TRC$nzffdRecordNumber))
 
-DATA <- NZFFD[!duplicated(NZFFD$nzffdRecordNumber),]
-SPECIES<-unique(NZFFD$taxonName)
-tmp<-split(NZFFD$taxonName,NZFFD$nzffdRecordNumber)
+#check:
+table(NZFFD_pa$institution, is.na(NZFFD_pa$totalCount))
+
+
+#1. Fix 'present' variable
+NZFFD_pa$present <- as.numeric(ifelse(NZFFD_pa$present == 'true', 1, 0)) #If present than one, if not the zero
+NZFFD_pa$totalCount <- ifelse(is.na(NZFFD_pa$totalCount), 0, NZFFD_pa$totalCount) #If NA than count is zero
+
+NZFFD_pa$pa <- ifelse((NZFFD_pa$present + NZFFD_pa$totalCount) > 0, TRUE, FALSE) #derive presence/absence (pa) variable
+
+#Remove variables I don't need
+NZFFD_pa <- NZFFD_pa %>% select(-c(present, totalCount))
+
+
+#2. Remove any FALSE's as these will be naturally generated when a species doesn't appear with a nzffdRecordNumber
+NZFFD_pa <- NZFFD_pa %>% filter(pa!=FALSE)
+
+
+# Sorting out NZFFD records into single records
+DATA <- NZFFD_pa[!duplicated(NZFFD_pa$nzffdRecordNumber),]
+SPECIES<-unique(NZFFD_pa$taxonName)
+tmp<-split(NZFFD_pa$taxonName,NZFFD_pa$nzffdRecordNumber)
 
 res <- lapply(tmp,function(x) match(SPECIES,x,nomatch=0)>0)
 res <- do.call("rbind",res)
@@ -289,24 +307,23 @@ res <- data.frame(res)
 names(res) <- SPECIES
 
 DATA <- DATA[order(DATA$nzffdRecordNumber),]
-DATA<-cbind(DATA,res)
+NZFFD_pa_final<-cbind(DATA,res)
 
-nrow(DATA)
-length(unique(DATA$nzffdRecordNumber))
+nrow(NZFFD_pa_final)
+length(unique(NZFFD_pa_final$nzffdRecordNumber))
 
 rm(tmp,res)
 
 
-# ###########################
-# # Abundance data from TRC #
-# ###########################
-# 
-# abundance_data_TRC <- NZFFD %>% filter(institution == "Taranaki Regional Council")
+#Select rows of interest
+colnames(NZFFD_pa_final)
 
-
-
-
-
+NZFFD_pa_final <- NZFFD_pa_final %>%
+  select(nzffdRecordNumber, nzsegment, Lat, Lon, catchmentName, catchmentNumber, #Variables related to identifability and location
+         child_i, parent_i, dist_i, #variables derived for stream network modelling
+         Year, org, institution, FishMethod, #variables specific to sampling
+         #Put an effort variable here
+         `Anguilla dieffenbachii`, `Anguilla australis`) #fish species present
 
 
 ###############
@@ -314,16 +331,12 @@ rm(tmp,res)
 ###############
 
 #Convert longfin eel FALSE/TRUE to 0/1
-obs$angdie <- factor(obs$angdie, levels = c("FALSE", "TRUE"))
-obs$angdie <- as.numeric(obs$angdie) - 1
+NZFFD_pa_final$`Anguilla dieffenbachii` <- factor(NZFFD_pa_final$`Anguilla dieffenbachii`, levels = c("FALSE", "TRUE"))
+NZFFD_pa_final$`Anguilla dieffenbachii` <- as.numeric(NZFFD_pa_final$`Anguilla dieffenbachii`) - 1
 
 #Convert shortfin eel FALSE/TRUE to 0/1
-obs$angaus <- factor(obs$angaus, levels = c("FALSE", "TRUE"))
-obs$angaus <- as.numeric(obs$angaus) - 1
-
-
-#Format final data
-obs <- obs %>% select(-c("effort", "pass"))
+NZFFD_pa_final$`Anguilla australis` <- factor(NZFFD_pa_final$`Anguilla australis`, levels = c("FALSE", "TRUE"))
+NZFFD_pa_final$`Anguilla australis` <- as.numeric(NZFFD_pa_final$`Anguilla australis`) - 1
 
 
 
@@ -331,20 +344,33 @@ obs <- obs %>% select(-c("effort", "pass"))
 # Examine the data across time #
 ################################
 
-addmargins(table(obs$angdie, obs$Year)) #longfin eel
+#Abundance data
+addmargins(table(NZFFD_pa_final$Year))
 
-addmargins(table(obs$angaus, obs$Year)) #shortfin eel
+colnames(pa_table)[pa_table["Sum",] < 30]
 
-# Remove the years 1966 and 1969 as these years only have 1 observation
-# and are 10 years earlier than the rest of the data set. Also remove
-# the year 2022 as this year is incomplete at the time of the analysis
+# Keep all years for now, can remove later
 
-obs <- obs %>% filter(!(Year %in% c(1966, 1969, 2022)))
+#Examine missingness
+colSums(is.na(NZFFD_abund_TRC_lf))
 
+
+#Presence/absence data
+pa_table <- addmargins(table(NZFFD_pa_final$`Anguilla dieffenbachii`, NZFFD_pa_final$Year)) ; pa_table #longfin eel
+addmargins(table(NZFFD_pa_final$`Anguilla australis`, NZFFD_pa_final$Year)) #shortfin eel
+
+colnames(pa_table)[pa_table["Sum",] < 30]
+
+# Keep all years for now, can remove later
+
+#Examine missingness
+colSums(is.na(NZFFD_pa_final))
 
 
 ##########
 #  Save  #
 ##########
 
-saveRDS(obs, file.path(data_taranaki_dir, "Taranaki_NZFFD_obs.rds"))
+saveRDS(NZFFD_pa_final, file.path(data_taranaki_dir, "Taranaki_NZFFD_pa_data.rds"))
+saveRDS(NZFFD_abund_TRC_lf, file.path(data_taranaki_dir, "Taranaki_NZFFD_abund_data.rds"))
+
