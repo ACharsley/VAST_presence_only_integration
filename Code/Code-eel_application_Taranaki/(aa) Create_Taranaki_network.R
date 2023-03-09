@@ -2,11 +2,12 @@
 ##          Create Taranaki network data         ## 
 ##                                               ##
 ##                Anthony Charsley               ##
-##                 November 2022                 ##
+##                  March 2023                   ##
 ###################################################
 
 # This code creates a stream network of the Taranki region  
-# in New Zealand from REC2 data for stream network modelling.
+# in New Zealand. The stream network will be built using 
+# data from the REC2 database.
 
 ###################################################
 
@@ -18,7 +19,7 @@ rm(list=ls())
 #################
 
 data_dir <- "./Data_processed"
-raw_data_dir <- "./Data_raw"
+raw_data_dir <- "./Data_raw/Eel_application_Taranaki"
 
 data_taranaki_dir <- "./Data_processed/Taranaki"
 dir.create(data_taranaki_dir, showWarnings=FALSE)
@@ -47,29 +48,64 @@ library(proj4)
 load(file.path(raw_data_dir, "REC2.4_variables.RData"))
 network_raw <- REC2.4 ; rm(REC2.4)
 
-#Covariates used in the Ngai Tahu study, perhaps reassess later ??
-REC_covs <- c("FWENZ_SegRipShade", "FWENZ_segSubstrate", "loc_slope", "FWENZ_segAveTWarm",
-              "Dist2Coast_FromMid", "DSDIST2LAK", "FWENZ_DSDamAffected")
+
+# #Covariates selected from Charsley et al. (2023) - these underwent VIF analysis and were selected by RRF models
+# covariates_charsleyetal <- read.csv(file.path(raw_data_dir, "Charsleyetal2023_Gini_scores.csv"))
+# covariates_charsleyetal <- covariates_charsleyetal %>% 
+#   filter(angdie != 0) %>%
+#   pull(X)
+# 
+# # #Covariates used in the Ngai Tahu study, perhaps reassess later ??
+# # REC_covs <- c("FWENZ_SegRipShade", "FWENZ_segSubstrate", "loc_slope", "FWENZ_segAveTWarm",
+# #               "Dist2Coast_FromMid", "DSDIST2LAK", "FWENZ_DSDamAffected")
+# 
+# 
+# #edit names so that match those in the REC database
+# covariates_charsleyetal[covariates_charsleyetal %in% names(network_raw)]
+# 
+# ## These variables couldn't be found
+# # "seg_hard", "x3", 
+# ## Additionally, the following hydrology variables couldn't be found and were replaced by
+# ## MeanFlowCumecs, "FWENZ_usLowFlow", "FWENZ_SegFlowStability":
+# # ("Contingency", "JulianMax.StandardisedByMeanFlow", "JulianMin.StandardisedByMeanFlow", 
+# # "Mean1DayFlowMins.StandardisedByMeanFlow", "nNeg.StandardisedByMeanFlow",
+# # "Predictability", "Reversals.StandardisedByMeanFlow")
+# 
+# REC_covs <- c("Dist2Coast", "StreamOrder", "sinuosity", "segslpmean", "seg_ro_mm", "FWENZ_usHard",
+#               "loc_elev", "us_slope", "loc_penpet", "loc_rnvar", "loc_rd100", "lc_phos", "us_phos",
+#               "loc_psize", "local_twarm", "DSDIST2LAK", "FWENZ_dsMaxSlope", "FWENZ_dsAveSlope", "us_ind",
+#               "FWENZ_USCalcium", "FWENZ_USLakePC", "FWENZ_segShade", "MeanFlowCumecs", "FWENZ_usLowFlow",
+#               "FWENZ_SegFlowStability",
+#               
+#               "FWENZ_DSDamAffected", "FWENZ_SegRipShade", "FWENZ_segSubstrate", "loc_slope", "FWENZ_segAveTWarm",
+#               "Dist2Coast_FromMid") #additional covariate to use
+
+#Covariates to initially consider based on the literature and expert opinion:
+REC_covs <- c("loc_elev", "StreamOrder", "seg_ro_mm", "FWENZ_SegRipShade", "MeanFlowCumecs", "FWENZ_segSubstrate",
+              "FWENZ_DSDamAffected","local_twarm") #Average within section mean January air temperature. deg C x10
+
 
 # Create network for the taranaki with variables of interest
 network <- network_raw %>%
   select(CatName, nzsegment, upcoordX, upcoordY, fnode, tnode, Shape_Leng, WidthMeanFlow, StreamOrder, FWENZ_isLake,
          isTerminal, rcID, all_of(REC_covs)) %>%
   rename('northing'=upcoordY, 'easting'=upcoordX, 'parent_s' = tnode, 'child_s' = fnode, #Coordinates and nodes
-         'length'=Shape_Leng, 'width'=WidthMeanFlow,  #River dimensions
-         'Shade' = FWENZ_SegRipShade, 'Substrate' = FWENZ_segSubstrate, 'Slope' = loc_slope, #covariates
-         'AveTWarm' = FWENZ_segAveTWarm, 'Dist2Coast' = Dist2Coast_FromMid, 'DSDist2Lake'= DSDIST2LAK, #covariates
+         'length'=Shape_Leng, 'width'=WidthMeanFlow,
          'DSDamAffected'=FWENZ_DSDamAffected) %>%
   mutate('length' = length / 1000, 'width' = width/1000) %>% #in km
-  mutate(rcID = factor(rcID)) %>%
-  filter(rcID == 6) #rcID 6 is the taranaki region, better to identify specific catchments as some rivers may be missed (talk to Shan)
+  mutate(rcID = factor(rcID))
 
 #Create variable 'dist_s"
 network <- network %>% 
   mutate('dist_s' = length) #Add dist_s.
 
-#Change names of REC_covs
-REC_covs <- c('Shade', 'Substrate', 'Slope', 'AveTWarm', 'Dist2Coast', 'DSDist2Lake', 'DSDamAffected')
+
+## rcID examined in 'Plot_rcID.R' code
+network <- network %>%
+  filter(rcID == 6) #rcID 6 is the taranaki region
+
+##
+
 
 #child nodes should be unique
 length(unique(network$child_s)) == nrow(network)
@@ -138,7 +174,10 @@ if(length(unique(roots$child_s)) != nrow(roots)){
 #############################
 
 #Ensure roots have slightly different coordinates than the joining segment
-root_toUse <- root_toUse %>% mutate(easting = easting + runif(length(easting),-0.01,0.01))
+set.seed(20223)
+root_toUse <- root_toUse %>% mutate(easting = easting + runif(length(easting),-0.1,0.1),
+                                    northing = northing + runif(length(northing),-0.1,0.1))
+
 
 #Connect roots to network
 network_all <- rbind.data.frame(network, unique(root_toUse))

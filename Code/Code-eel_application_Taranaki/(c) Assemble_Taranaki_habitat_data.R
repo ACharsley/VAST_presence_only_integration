@@ -19,7 +19,7 @@ rm(list=ls())
 #################
 
 data_dir <- "./Data_processed"
-raw_data_dir <- "./Data_raw"
+raw_data_dir <- "./Data_raw/Eel_application_Taranaki"
 data_taranaki_dir <- "./Data_processed/Taranaki"
 
 fig_dir <- file.path(data_taranaki_dir, "Figures")
@@ -49,7 +49,15 @@ network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
 # Habitat coviariates #
 #######################
 
-REC_covs <- c('Shade', 'Substrate', 'Slope', 'AveTWarm', 'Dist2Coast', 'DSDist2Lake')
+# REC_covs <- c('Shade', 'Substrate', 'Slope', 'AveTWarm', 'Dist2Coast', 'DSDist2Lake')
+REC_covs <- c("Dist2Coast", "StreamOrder", "sinuosity", "segslpmean", "seg_ro_mm", "FWENZ_usHard",
+              "loc_elev", "us_slope", "loc_penpet", "loc_rnvar", "loc_rd100", "lc_phos", "us_phos",
+              "loc_psize", "local_twarm", "DSDIST2LAK", "FWENZ_dsMaxSlope", "FWENZ_dsAveSlope", "us_ind",
+              "FWENZ_USCalcium", "FWENZ_USLakePC", "FWENZ_segShade", "MeanFlowCumecs", "FWENZ_usLowFlow",
+              "FWENZ_SegFlowStability", "FWENZ_SegRipShade", "FWENZ_segSubstrate", "loc_slope", "FWENZ_segAveTWarm",
+              "Dist2Coast_FromMid")
+
+#Identify covariates to use through expert opinion
 
 #Set years
 yrs <- c(1966:2021) #Use all these years for now but will remove some later
@@ -65,10 +73,10 @@ hab_REC_full <- network %>%
 
 #Habitat covariate values at lakes should be set to NA for REC covariates
 #i.e. the segment is included but observations / habitat values are not
-hab_REC_full[hab_REC_full$FWENZ_isLake==TRUE, c('Shade', 'Substrate', 'Slope', 'AveTWarm', 'Dist2Coast')] <- NA
+hab_REC_full[hab_REC_full$FWENZ_isLake==TRUE, REC_covs[!REC_covs == "DSDIST2LAK"]] <- NA
 
 #Distance to lake is set to zero
-hab_REC_full[hab_REC_full$FWENZ_isLake==TRUE, 'DSDist2Lake'] <- 0
+hab_REC_full[hab_REC_full$FWENZ_isLake==TRUE, 'DSDIST2LAK'] <- 0
 
 #Remove FWENZ_isLake variable
 hab_REC_full <- hab_REC_full %>% select(-c("FWENZ_isLake"))
@@ -128,7 +136,7 @@ sapply(1:ncol(hab_barrier_full), function(x) length(which(is.na(hab_barrier_full
 
 # ###############################
 # 
-# ## Set up raw barrier covariate ##
+# ## Set up land use covariate ##
 # 
 # lu_data <- read_sf(dsn = file.path(raw_data,"Land_use_data"), layer = "lucas-nz-land-use-map-1990-2008-2012-2016-v011") #Data extracted on 7/12/22 from https://data.mfe.govt.nz/layer/52375-lucas-nz-land-use-map-1990-2008-2012-2016-v011/data/
 # 
@@ -138,86 +146,74 @@ sapply(1:ncol(hab_barrier_full), function(x) length(which(is.na(hab_barrier_full
 # 
 # ###############################
 
-
 #########################################################
 # Examine habitat covariates and transform as necessary #
 #########################################################
 
 ## Examine REC covariates ##
 
+for(j in c(1:length(REC_covs))){
+  
+  # Raw covariate plots
+  jpeg(paste0(covariate_plot_dir,"/REC_raw_",REC_covs[j],".jpeg"), height=8, width=8,units="in", res=600)
+  hist(hab_REC_full[,REC_covs[j]], main=paste0("Distribution of ",REC_covs[j]))
+  abline(v=mean(hab_REC_full[,REC_covs[j]], na.rm = T),col="red")
+  abline(v=median(hab_REC_full[,REC_covs[j]], na.rm = T),col="blue")
+  legend("topright", c("Mean", "Median"), col = c("red", "blue"), lty = 1, lwd=3)
+  dev.off()
+  
+  
+}
+
+
 # Look at raw data
-summary(hab_REC_full[,REC_covs]) # mean and median look approximately similar for all except Dist2Coast_FromMid and DSDIST2LAK
+summary(hab_REC_full[,REC_covs]) 
+# mean and median look approximately similar for all except:
+# Dist2Coast, seg_ro_mm, DSDIST2LAK and FWENZ_usLowFlow, Dist2Coast_FromMid
 
-# Raw covariate plots
-jpeg(paste0(covariate_plot_dir,"/REC_raw.jpeg"), height=8, width=8,units="in", res=600)
-par(mfrow=c(2,3))
-boxplot(hab_REC_full$Shade, main="Distribution of shade")
+# log transform these
+summary(log(hab_REC_full$Dist2Coast+0.1)) #mean and median much closer now
+summary(log(hab_REC_full$seg_ro_mm)) #mean and median much closer now
+summary(log(hab_REC_full$DSDIST2LAK+0.1)) #mean and median much closer now
+summary(log(hab_REC_full$FWENZ_usLowFlow+0.1)) #mean and median much closer now
+summary(log(hab_REC_full$Dist2Coast_FromMid+0.1)) #mean and median much closer now
 
-boxplot(hab_REC_full$Substrate, main="Distribution of substrate type")
 
-boxplot(hab_REC_full$Slope, main="Distribution of slope")
-
-boxplot(hab_REC_full$AveTWarm, main="Distribution of average summer temp.")
-
-boxplot(hab_REC_full$Dist2Coast, main="Distribution of distance to coast")
-
-boxplot(hab_REC_full$DSDist2Lake, main="Distribution of distance to lake")
-dev.off()
-
-## Examining a log transformation of distance to coast
-summary(log(hab_REC_full$Dist2Coast)) #mean and median much closer now
-
-jpeg(paste0(covariate_plot_dir,"/Log_distance_to_coast.jpeg"), height=8, width=8,units="in", res=600)
-boxplot(log(hab_REC_full$Dist2Coast), main="Distribution of log distance to coast")
-dev.off()
-
-#log
-hab_REC_full$log_Dist2Coast <- log(hab_REC_full$Dist2Coast)
+#Perform log transformation
+hab_REC_full$log_Dist2Coast <- log(hab_REC_full$Dist2Coast+0.1)
+hab_REC_full$log_seg_ro_mm <- log(hab_REC_full$seg_ro_mm)
+hab_REC_full$log_DSDIST2LAK <- log(hab_REC_full$DSDIST2LAK+0.1)
+hab_REC_full$log_FWENZ_usLowFlow <- log(hab_REC_full$FWENZ_usLowFlow+0.1)
+hab_REC_full$log_Dist2Coast_FromMid <- log(hab_REC_full$Dist2Coast_FromMid+0.1)
 
 #remove raw values
-hab_REC_full <- hab_REC_full %>% select(-c("Dist2Coast"))
+hab_REC_full <- hab_REC_full %>% select(-c("Dist2Coast", "seg_ro_mm", "DSDIST2LAK", "FWENZ_usLowFlow"))
 
 #Change cov names
 REC_covs[REC_covs=="Dist2Coast"] = "log_Dist2Coast"
+REC_covs[REC_covs=="seg_ro_mm"] = "log_seg_ro_mm"
+REC_covs[REC_covs=="DSDIST2LAK"] = "log_DSDIST2LAK"
+REC_covs[REC_covs=="FWENZ_usLowFlow"] = "log_FWENZ_usLowFlow"
+REC_covs[REC_covs=="Dist2Coast_FromMid"] = "log_Dist2Coast_FromMid"
 
 
+# Plot covariates transformed and standardised
+for(j in c(1:length(REC_covs))){
+  
+  std_data <- as.vector(scale(hab_REC_full[,REC_covs[j]]))
+  
+  # Standardised covariate plots
+  jpeg(paste0(covariate_plot_dir,"/REC_std_",REC_covs[j],".jpeg"), height=8, width=8,units="in", res=600)
+  hist(std_data, main=paste0("Distribution of std. ",REC_covs[j]))
+  abline(v=mean(std_data, na.rm = T),col="red")
+  abline(v=median(std_data, na.rm = T),col="blue")
+  legend("topright", c("Mean", "Median"), col = c("red", "blue"), lty = 1, lwd=3)
+  dev.off()
+  
+  
+}
 
-## Examining a log+0.1 transformation of distance to lake 
-summary(log(hab_REC_full$DSDist2Lake+0.1)) #mean and median much closer now
-
-jpeg(paste0(covariate_plot_dir,"/Log_distance_to_lake.jpeg"), height=8, width=8,units="in", res=600)
-boxplot(log(hab_REC_full$DSDist2Lake+0.1), main="Distribution of log distance to lake")
-dev.off()
-
-
-#Standardising covariates and log distance to lake should fix up issues
-
-#log
-hab_REC_full$log_DSDist2Lake <- log(hab_REC_full$DSDist2Lake+0.1)
-
-#remove raw values
-hab_REC_full <- hab_REC_full %>% select(-c("DSDist2Lake"))
-
-#Change cov names
-REC_covs[REC_covs=="DSDist2Lake"] = "log_DSDist2Lake"
-
-
-# Plot fixed covariates
-jpeg(paste0(covariate_plot_dir,"/REC_standardised.jpeg"), height=8, width=8,units="in", res=600)
-par(mfrow=c(2,3))
-boxplot(scale(hab_REC_full$Shade), main="Distribution of std. shade")
-
-boxplot(scale(hab_REC_full$Substrate), main="Distribution of std. substrate type")
-
-boxplot(scale(hab_REC_full$Slope), main="Distribution of std. slope")
-
-boxplot(scale(hab_REC_full$AveTWarm), main="Distribution of std. average summer temp.")
-
-boxplot(scale(hab_REC_full$log_Dist2Coast), main="Distribution of std. distance to coast")
-
-boxplot(scale(hab_REC_full$log_DSDist2Lake), main="Distribution of std. log distance to lake")
-dev.off()
-
+## Covariate data is certainly not perfect but improves significantly
 
 ###########################################
 
@@ -230,17 +226,73 @@ summary(scale(hab_barrier_full$Years_since_barrier))
 
 #Raw covariate
 jpeg(paste0(covariate_plot_dir,"/Raw_YearsSinceDam.jpeg"), height=8, width=8,units="in", res=600)
-boxplot(hab_barrier_full$Years_since_barrier, main="Distribution of years since barrier")
+hist(hab_barrier_full$Years_since_barrier, main="Distribution of years since barrier")
 dev.off()
 
 #Standardised covariate
 jpeg(paste0(covariate_plot_dir,"/Standardised_YearsSinceDam.jpeg"), height=8, width=8,units="in", res=600)
-boxplot(scale(hab_barrier_full$Years_since_barrier), main="Distribution of std. years since barrier")
+hist(scale(hab_barrier_full$Years_since_barrier), main="Distribution of std. years since barrier")
 dev.off()
 
 
 ###########################################
 
+
+
+
+
+# ##############################################
+# # Examine the correlation amongst covariates #
+# ##############################################
+# 
+# library(corrplot)
+# 
+# hab_REC_full_complete <- hab_REC_full[complete.cases(hab_REC_full[,REC_covs]),REC_covs]
+# 
+# #Standardise before examining:
+# for(j in c(1:length(REC_covs))){
+#   
+#   hab_REC_full_complete[,REC_covs[j]] <- as.vector(scale(hab_REC_full_complete[,REC_covs[j]]))
+#   
+# }
+# 
+# cor(hab_REC_full_complete)
+# 
+# # jpeg(paste0(fig_dir,"/Correlation_plot.jpeg"), height=8, width=8,units="in", res=600)
+# # corrplot(cor(hab_REC_full_complete))
+# # dev.off()
+# 
+# jpeg(paste0(fig_dir,"/Correlation_plot.jpeg"), height=8, width=8,units="in", res=600)
+# corrplot(cor(hab_REC_full_complete), method = "number", number.cex = 0.6, type = 'upper')
+# dev.off()
+# 
+# abs(cor(hab_REC_full_complete))>0.7
+# 
+# #High correlation for variables (greater than 0.7 (Dormann et al 2013: https://doi.org/10.1111/j.1600-0587.2012.07348.x)):
+# # log_FWENZ_usLowFlow, FWENZ_usHard, loc_penpet, us_slope, FWENZ_SegFlowStability
+# # lc_phos, us_phos, loc_psize, FWENZ_USCalcium
+# 
+# hab_REC_full_complete_v2 <- hab_REC_full_complete %>%
+#   select(-c("log_FWENZ_usLowFlow", "FWENZ_usHard", "loc_penpet", "us_slope", "FWENZ_SegFlowStability",
+#             "lc_phos", "us_phos", "loc_psize", "FWENZ_USCalcium"))
+# 
+# 
+# jpeg(paste0(fig_dir,"/Correlation_plot_V2.jpeg"), height=8, width=8,units="in", res=600)
+# corrplot(cor(hab_REC_full_complete_v2), method = "number", number.cex = 0.6, type = 'upper')
+# dev.off()
+# 
+# 
+# #Remove these variables:
+# hab_REC_full <- hab_REC_full %>%
+#   select(-c("log_FWENZ_usLowFlow", "FWENZ_usHard", "loc_penpet", "us_slope", "FWENZ_SegFlowStability",
+#             "lc_phos", "us_phos", "loc_psize", "FWENZ_USCalcium"))
+# 
+# #Remove these variable names
+# REC_covs <- REC_covs[!REC_covs %in% c("log_FWENZ_usLowFlow", "FWENZ_usHard", "loc_penpet", "us_slope", "FWENZ_SegFlowStability",
+#                                       "lc_phos", "us_phos", "loc_psize", "FWENZ_USCalcium")]
+# 
+# 
+# ###########################################
 
 
 #####################################

@@ -51,3 +51,29 @@ net_taranaki <- net_to_plot %>% mutate(Taranaki = factor(ifelse(rcID==6, 2, 1)))
 taranaki_on_NZ <- ggplot(net_taranaki) +
   geom_point(aes(upcoordX, upcoordY, col=Taranaki))
 ggsave(file.path(fig_dir, "Taranaki_on_NZ.png"), taranaki_on_NZ)
+
+
+#Taranaki, Manawatu/Ruapehu, Waikato
+net_TMRW <- net_to_plot %>% filter(rcID %in% c("3", "6", "7"))
+
+NZplot <- ggplot(net_to_plot) +
+  geom_point(aes(upcoordX, upcoordY))
+
+regions_on_NZ <- NZplot +
+  geom_point(data=net_TMRW, aes(upcoordX, upcoordY, col=rcID))
+ggsave(file.path(fig_dir, "NZ_network_filtered_rcID.png"), regions_on_NZ)
+#This plot confirms we are looking at the regions around Taranaki - now look at the individual catchments!
+
+
+
+###################
+# Catchment plots #
+###################
+
+length(unique(net_TMRW$CatName))
+
+#Lots to consider and many only have 1 so may be impossible to separate out by CatName. Could use 'catch' in NZFFD
+#but this would require joining the datasets together and may have the same issue.
+
+
+

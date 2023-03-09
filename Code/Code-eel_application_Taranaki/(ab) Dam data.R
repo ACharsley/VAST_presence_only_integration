@@ -11,7 +11,7 @@ library(readxl)
 #####################
 
 data_dir <- "./Data_processed"
-raw_data_dir <- "./Data_raw"
+raw_data_dir <- "./Data_raw/Eel_application_Taranaki"
 data_taranaki_dir <- "./Data_processed/Taranaki"
 fig_dir <- file.path(data_taranaki_dir, "Figures")
 

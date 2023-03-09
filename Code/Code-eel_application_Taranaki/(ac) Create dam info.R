@@ -89,7 +89,7 @@ dam_data_to_join$Year_barrier_finished[dam_data_to_join$CatName_ID == "Waingongo
 
 
 ## Load network to extract habitat covariates
-network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
+network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network_aa.rds"))
 
 
 dam_list <- list()

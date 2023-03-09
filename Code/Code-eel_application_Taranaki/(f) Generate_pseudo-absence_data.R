@@ -3,7 +3,7 @@
 ##             for the Taranaki region           ##
 ##                                               ##
 ##               Anthony Charsley                ##
-##                November 2022                  ##
+##                January 2023                   ##
 ###################################################
 
 # This code generates pseudo-absence data.
@@ -40,9 +40,11 @@ library(units)
 #################
 
 data_dir <- "./Data_processed"
-raw_data_dir <- "./Data_raw"
+raw_data_dir <- "./Data_raw/Eel_application_Taranaki"
 data_taranaki_dir <- "./Data_processed/Taranaki"
 fig_dir <- "./Data_processed/Taranaki/Figures"
+
+HSM_dir <- "./Eel_HSM_taranaki"
 
 pseudoabsence_data_dir <- file.path(data_taranaki_dir, "Pseudo_absence_data")
 dir.create(pseudoabsence_data_dir, showWarnings = F)
@@ -64,35 +66,39 @@ presence_only_lf_data <- readRDS(file.path(data_taranaki_dir, "Taranaki_presence
 
 years_to_sample <- unique(presence_only_lf_data$Year)[order(unique(presence_only_lf_data$Year))]
 
+##Load habitat suitability data
+load(file.path(HSM_dir, "HSM_encounter_prob.RData"))
 
-# ##Road data
-# NZ_roads_data <- read_sf(dsn = raw_data, layer = "nz-primary-road-parcels") #Data extracted on 14/11/22 from https://data.linz.govt.nz/layer/50796-nz-primary-road-parcels/
-# 
-# #Extract coordinates
-# NZ_roads_coords <- as.data.frame(sf::st_coordinates(NZ_roads_data)) %>% select(X,Y) %>% rename("Lat"=Y, "Lon"=X)
-# NZ_roads_coords <- st_as_sf(NZ_roads_coords, coords = c("Lon","Lat"), crs = 4326, agr = "constant") #Save as sf object
-# NZ_roads_coords <- st_transform(NZ_roads_coords, 3857) #Ensure I'm using the correct projection for distance calcs
+##Road data
+NZ_roads_data <- read_sf(dsn = raw_data_dir, layer = "nz-primary-road-parcels") #Data extracted on 14/11/22 from https://data.linz.govt.nz/layer/50796-nz-primary-road-parcels/
 
+#Extract coordinates
+NZ_roads_coords <- as.data.frame(sf::st_coordinates(NZ_roads_data)) %>% select(X,Y) %>% rename("Lat"=Y, "Lon"=X)
+NZ_roads_coords <- st_as_sf(NZ_roads_coords, coords = c("Lon","Lat"), crs = 4326, agr = "constant") #Save as sf object
+NZ_roads_coords <- st_transform(NZ_roads_coords, 3857) #Ensure I'm using the correct projection for distance calcs
 
 
 ##############################
 #  Format network_to_sample  #
 ##############################
 
-#Ensure variables are the same as NZFFD variables
+#Ensure variables are the same as presence-only/NZFFD variables
 network_to_sample <- network_to_sample %>% 
   select("nzsegment","Lat","Lon","child_s","parent_s","dist_s","CatName") %>%
   rename("child_i" = "child_s",
          "parent_i" = "parent_s",
          "dist_i" = "dist_s",
-         "catchname" = "CatName") %>%
-  mutate("Year" = NA, #Figure out what to do with year
-         "angdie" = 0,
-         "angaus" = 0,
-         "fishmeth" = NA,
-         "org" = NA) %>%
-  arrange("nzsegment","Lat","Lon","child_i","parent_i","dist_i","Year", "catchname",
-          "angdie","angaus","fishmeth","org")
+         "catchmentName" = "CatName") %>%
+  mutate("nzffdRecordNumber" = NA,
+         "catchmentNumber" = NA,
+         #Year to be added in sampling procedure below
+         "org" = "pseudo_absence",
+         "institution" = "Pseudo absence",
+         "FishMethod" = NA,
+         "Anguilla dieffenbachii" = 0, 
+         "Anguilla australis" = 0) %>%
+  relocate("nzffdRecordNumber","nzsegment","Lat","Lon","catchmentName","catchmentNumber","child_i","parent_i","dist_i",
+           "org", "institution", "FishMethod", "Anguilla dieffenbachii", "Anguilla australis")
 
 
 ##################################
@@ -114,19 +120,32 @@ for(i in c(1:length(years_to_sample))){
   
   
   #Remove NZFFD locations for year of interest
-  to_remove <- NZFFD_data$child_i[NZFFD_data$Year == years_to_sample[i] & NZFFD_data$`Anguilla dieffenbachii` == 1]
+  ##to_remove <- NZFFD_data$child_i[NZFFD_data$Year == years_to_sample[i] & NZFFD_data$`Anguilla dieffenbachii` == 1]
+  to_remove1 <- NZFFD_data %>%
+    filter(Year == years_to_sample[i] & `Anguilla dieffenbachii` == 1) %>%
+    pull(child_i)
   
   #Remove presence-only locations for all years except the year of interest
-  #ADD CODE HERE
+  ##to_remove2 <- presence_only_lf_data$child_i[presence_only_lf_data$Year == years_to_sample[i]] #no need to filter out lf==1 as all are ==1
+  to_remove2 <- presence_only_lf_data %>%
+    filter(Year == years_to_sample[i]) %>%
+    pull(child_i)
   
+  #browser()
+  
+  #Add together
+  to_remove <- c(to_remove1, to_remove2)
   
   #If there is data in that year take a sample, if not no pseudo-absence data for that year
   if(length(to_remove)>0){
     
     data_to_sample <- network_to_sample %>% 
-      filter(!(child_i %in% to_remove))
+      filter(!(child_i %in% to_remove)) %>%
+      mutate("Year" = years_to_sample[i])
     
-    n <- 100 #length of presence-only data for year of interest - CHANGE CODE 
+    #length of presence-only data for year of interest 
+    n <- nrow(presence_only_lf_data %>% filter(Year == years_to_sample[i]))
+    
     
     ## a. As many as the presence-only data
     sample_1a[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
@@ -141,6 +160,10 @@ for(i in c(1:length(years_to_sample))){
     sample_1d[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*10),]
     
   }
+  
+  #Remove
+  rm(to_remove) ; rm(to_remove1) ; rm(to_remove2) ; rm(data_to_sample)
+  
 }
 
 #Combine data sets
@@ -152,9 +175,14 @@ sample_1d <- do.call(rbind, sample_1d)
 
 
 
-# #################################
-# # 2. Spatially biased generation
-# #################################
+#########################################################################
+# 2. Random generation at locations with unsuitable longfin eel habitat #
+#########################################################################
+
+sample_2a = sample_2b = sample_2c = sample_2d = list()
+
+set.seed(280223)
+
 # 
 # ##Network saved as SF object for 'closest distance to road' calculations
 # network_to_sample_SF <- st_as_sf(network_to_sample, coords = c("Lon","Lat"), crs = 4326, agr = "constant") #Save as sf object for use later
@@ -189,6 +217,19 @@ sample_1d <- do.call(rbind, sample_1d)
 # 
 # ## d. 10x as many as the presence-only data
 # sample_2d <- network_to_sample_roadbias[sample(c(1:nrow(network_to_sample_roadbias)), n*10),]
+
+
+#####################################################################
+# 3. Random generation at locations within 2km of a registered road #
+#####################################################################
+
+
+
+#####################################################################
+# 4. Random generation at locations within 2km of a registered road #
+#    and with unsuitable longfin eel habitat                        #
+#####################################################################
+
 
 
 
