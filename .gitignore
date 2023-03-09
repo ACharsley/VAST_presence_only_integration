@@ -40,9 +40,13 @@ vignettes/*.pdf
 
 
 #My folders to ignore
-Analyses/
+Dam_Analysis/
 Data_processed/
 Data_raw/
+Documents/
+Eel_HSM_taranaki/
+Models-eel_application_Taranaki/
+Send to Shan/
 
 
 
