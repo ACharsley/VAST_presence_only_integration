@@ -35,6 +35,7 @@ dir.create(fig_dir, showWarnings=FALSE)
 library(tidyverse)
 library(proj4)
 # library(sf)
+library(corrplot)
 
 
 ##########################
@@ -81,14 +82,14 @@ network_raw <- REC2.4 ; rm(REC2.4)
 #               "Dist2Coast_FromMid") #additional covariate to use
 
 #Covariates to initially consider based on the literature and expert opinion:
-REC_covs <- c("loc_elev", "StreamOrder", "seg_ro_mm", "FWENZ_SegRipShade", "MeanFlowCumecs", "FWENZ_segSubstrate",
+initial_covs <- c("loc_elev", "StreamOrder", "seg_ro_mm", "FWENZ_SegRipShade", "MeanFlowCumecs", "FWENZ_segSubstrate",
               "FWENZ_DSDamAffected","local_twarm") #Average within section mean January air temperature. deg C x10
 
 
 # Create network for the taranaki with variables of interest
 network <- network_raw %>%
   select(CatName, nzsegment, upcoordX, upcoordY, fnode, tnode, Shape_Leng, WidthMeanFlow, StreamOrder, FWENZ_isLake,
-         isTerminal, rcID, all_of(REC_covs)) %>%
+         isTerminal, rcID, all_of(initial_covs)) %>%
   rename('northing'=upcoordY, 'easting'=upcoordX, 'parent_s' = tnode, 'child_s' = fnode, #Coordinates and nodes
          'length'=Shape_Leng, 'width'=WidthMeanFlow,
          'DSDamAffected'=FWENZ_DSDamAffected) %>%
@@ -119,6 +120,25 @@ sapply(1:ncol(network), function(x) length(which(is.na(network[,x])))/nrow(netwo
 # #Remove NAs from network
 # anyNA(network)
 # sapply(1:ncol(network), function(x) length(which(is.na(network[,x])))/nrow(network)) #0 missing all columns
+
+
+#####################################
+# Examine correlation in covariates #
+#####################################
+
+covs_to_examine <- c("loc_elev", "StreamOrder", "seg_ro_mm", "FWENZ_SegRipShade", "MeanFlowCumecs", "FWENZ_segSubstrate","local_twarm")
+
+hab_REC_full_complete <- network %>% 
+  select(all_of(covs_to_examine))
+
+hab_REC_full_complete <- hab_REC_full_complete[complete.cases(hab_REC_full_complete[,covs_to_examine]),covs_to_examine]
+cor(hab_REC_full_complete)
+
+#StreamOrder and seg_ro_mm are less important variables and have high correlation with other important variables,
+#will remove these
+
+REC_covs <- c("loc_elev", "FWENZ_SegRipShade", "MeanFlowCumecs", "FWENZ_segSubstrate", "local_twarm")
+
 
 
 #############################################

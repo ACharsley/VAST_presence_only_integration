@@ -10,7 +10,6 @@ library(readxl)
 ##   Directories   ##
 #####################
 
-data_dir <- "./Data_processed"
 raw_data_dir <- "./Data_raw/Eel_application_Taranaki"
 data_taranaki_dir <- "./Data_processed/Taranaki"
 fig_dir <- file.path(data_taranaki_dir, "Figures")
@@ -54,7 +53,7 @@ dam_data_full <- cbind.data.frame(dam_data, dam_ll)
 
 dam_data_full <- dam_data_full %>% select("NZDAM_ID", "NAME OF DAM", "OWNER", "DATE", "REF", "long", "lat")
 
-write_csv(dam_data_full, file = file.path(data_dir, "dam_meta_data.csv"))
+write_csv(dam_data_full, file = file.path(data_taranaki_dir, "dam_meta_data.csv"))
 
 #################
 ##   Dam map   ##

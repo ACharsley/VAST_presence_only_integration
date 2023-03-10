@@ -3,11 +3,11 @@
 ##           for the Taranaki region             ##
 ##                                               ##
 ##               Anthony Charsley                ##
-##                November 2022                  ##
+##                 March 2022                    ##
 ###################################################
 
 # This code assembles habitat covariates using
-# REC data ...
+# REC data.
 
 ###################################################
 
@@ -50,17 +50,18 @@ network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
 #######################
 
 # REC_covs <- c('Shade', 'Substrate', 'Slope', 'AveTWarm', 'Dist2Coast', 'DSDist2Lake')
-REC_covs <- c("Dist2Coast", "StreamOrder", "sinuosity", "segslpmean", "seg_ro_mm", "FWENZ_usHard",
-              "loc_elev", "us_slope", "loc_penpet", "loc_rnvar", "loc_rd100", "lc_phos", "us_phos",
-              "loc_psize", "local_twarm", "DSDIST2LAK", "FWENZ_dsMaxSlope", "FWENZ_dsAveSlope", "us_ind",
-              "FWENZ_USCalcium", "FWENZ_USLakePC", "FWENZ_segShade", "MeanFlowCumecs", "FWENZ_usLowFlow",
-              "FWENZ_SegFlowStability", "FWENZ_SegRipShade", "FWENZ_segSubstrate", "loc_slope", "FWENZ_segAveTWarm",
-              "Dist2Coast_FromMid")
+# REC_covs <- c("Dist2Coast", "StreamOrder", "sinuosity", "segslpmean", "seg_ro_mm", "FWENZ_usHard",
+#               "loc_elev", "us_slope", "loc_penpet", "loc_rnvar", "loc_rd100", "lc_phos", "us_phos",
+#               "loc_psize", "local_twarm", "DSDIST2LAK", "FWENZ_dsMaxSlope", "FWENZ_dsAveSlope", "us_ind",
+#               "FWENZ_USCalcium", "FWENZ_USLakePC", "FWENZ_segShade", "MeanFlowCumecs", "FWENZ_usLowFlow",
+#               "FWENZ_SegFlowStability", "FWENZ_SegRipShade", "FWENZ_segSubstrate", "loc_slope", "FWENZ_segAveTWarm",
+#               "Dist2Coast_FromMid")
+REC_covs <- c("loc_elev", "FWENZ_SegRipShade", "MeanFlowCumecs", "FWENZ_segSubstrate", "local_twarm")
 
 #Identify covariates to use through expert opinion
 
 #Set years
-yrs <- c(1966:2021) #Use all these years for now but will remove some later
+yrs <- c(1966:2022) #Use all these years for now but will remove some later
 
 ###############################
 
@@ -71,15 +72,15 @@ hab_REC_full <- network %>%
   mutate("Year" = NA) %>%
   select(Year, Lat, Lon, child_s, FWENZ_isLake, all_of(REC_covs))
 
-#Habitat covariate values at lakes should be set to NA for REC covariates
-#i.e. the segment is included but observations / habitat values are not
-hab_REC_full[hab_REC_full$FWENZ_isLake==TRUE, REC_covs[!REC_covs == "DSDIST2LAK"]] <- NA
-
-#Distance to lake is set to zero
-hab_REC_full[hab_REC_full$FWENZ_isLake==TRUE, 'DSDIST2LAK'] <- 0
-
-#Remove FWENZ_isLake variable
-hab_REC_full <- hab_REC_full %>% select(-c("FWENZ_isLake"))
+# #Habitat covariate values at lakes should be set to NA for REC covariates
+# #i.e. the segment is included but observations / habitat values are not
+# hab_REC_full[hab_REC_full$FWENZ_isLake==TRUE, REC_covs[!REC_covs == "DSDIST2LAK"]] <- NA
+# 
+# #Distance to lake is set to zero
+# hab_REC_full[hab_REC_full$FWENZ_isLake==TRUE, 'DSDIST2LAK'] <- 0
+# 
+# #Remove FWENZ_isLake variable
+# hab_REC_full <- hab_REC_full %>% select(-c("FWENZ_isLake"))
 
 #Some missing
 sapply(1:ncol(hab_REC_full), function(x) length(which(is.na(hab_REC_full[,x])))/nrow(hab_REC_full))
@@ -134,17 +135,6 @@ barrier_covs <- c("Years_since_barrier", "Barrier_present")
 sapply(1:ncol(hab_barrier_full), function(x) length(which(is.na(hab_barrier_full[,x])))/nrow(hab_barrier_full))
 
 
-# ###############################
-# 
-# ## Set up land use covariate ##
-# 
-# lu_data <- read_sf(dsn = file.path(raw_data,"Land_use_data"), layer = "lucas-nz-land-use-map-1990-2008-2012-2016-v011") #Data extracted on 7/12/22 from https://data.mfe.govt.nz/layer/52375-lucas-nz-land-use-map-1990-2008-2012-2016-v011/data/
-# 
-# #Extract coordinates
-# lu_data_coords <- as.data.frame(sf::st_coordinates(lu_data)) %>% select(X,Y) %>% rename("Lat"=Y, "Lon"=X)
-# 
-# 
-# ###############################
 
 #########################################################
 # Examine habitat covariates and transform as necessary #
@@ -165,36 +155,42 @@ for(j in c(1:length(REC_covs))){
   
 }
 
-
 # Look at raw data
 summary(hab_REC_full[,REC_covs]) 
-# mean and median look approximately similar for all except:
-# Dist2Coast, seg_ro_mm, DSDIST2LAK and FWENZ_usLowFlow, Dist2Coast_FromMid
+
+# The variables loc_elev, FWENZ_SegRipShade, MeanFlowCumecs and local_twarm are either
+# skewed or have mean/medians that aren't close
+
+
+
+##################################################
+# Examine possible transformations of covariates #
+##################################################
 
 # log transform these
-summary(log(hab_REC_full$Dist2Coast+0.1)) #mean and median much closer now
-summary(log(hab_REC_full$seg_ro_mm)) #mean and median much closer now
-summary(log(hab_REC_full$DSDIST2LAK+0.1)) #mean and median much closer now
-summary(log(hab_REC_full$FWENZ_usLowFlow+0.1)) #mean and median much closer now
-summary(log(hab_REC_full$Dist2Coast_FromMid+0.1)) #mean and median much closer now
+summary(log(hab_REC_full$loc_elev+1)) #add 1 because a few elevation values are below zero, mean and median much closer now
+# hist(log(hab_REC_full$loc_elev+1))
+summary((hab_REC_full$FWENZ_SegRipShade)^2) #mean and median much closer using square
+# hist((hab_REC_full$FWENZ_SegRipShade)^2) #distribution is still not great
+summary(log(hab_REC_full$MeanFlowCumecs)) #mean and median much closer now
+# hist(log(hab_REC_full$MeanFlowCumecs)) #log does the best job
+
+# I will leave local_twarm as is because the skew is mostly due to a few extreme values (that are possible and therefore not
+# outliers)
 
 
-#Perform log transformation
-hab_REC_full$log_Dist2Coast <- log(hab_REC_full$Dist2Coast+0.1)
-hab_REC_full$log_seg_ro_mm <- log(hab_REC_full$seg_ro_mm)
-hab_REC_full$log_DSDIST2LAK <- log(hab_REC_full$DSDIST2LAK+0.1)
-hab_REC_full$log_FWENZ_usLowFlow <- log(hab_REC_full$FWENZ_usLowFlow+0.1)
-hab_REC_full$log_Dist2Coast_FromMid <- log(hab_REC_full$Dist2Coast_FromMid+0.1)
+#Perform transformation
+hab_REC_full$log_loc_elev <- log(hab_REC_full$loc_elev+1)
+hab_REC_full$SegRipShade_sqrd <- (hab_REC_full$FWENZ_SegRipShade)^2
+hab_REC_full$log_MeanFlowCumecs <- log(hab_REC_full$MeanFlowCumecs)
 
 #remove raw values
-hab_REC_full <- hab_REC_full %>% select(-c("Dist2Coast", "seg_ro_mm", "DSDIST2LAK", "FWENZ_usLowFlow"))
+hab_REC_full <- hab_REC_full %>% select(-c("loc_elev", "FWENZ_SegRipShade", "MeanFlowCumecs"))
 
 #Change cov names
-REC_covs[REC_covs=="Dist2Coast"] = "log_Dist2Coast"
-REC_covs[REC_covs=="seg_ro_mm"] = "log_seg_ro_mm"
-REC_covs[REC_covs=="DSDIST2LAK"] = "log_DSDIST2LAK"
-REC_covs[REC_covs=="FWENZ_usLowFlow"] = "log_FWENZ_usLowFlow"
-REC_covs[REC_covs=="Dist2Coast_FromMid"] = "log_Dist2Coast_FromMid"
+REC_covs[REC_covs=="loc_elev"] = "log_loc_elev"
+REC_covs[REC_covs=="FWENZ_SegRipShade"] = "SegRipShade_sqrd"
+REC_covs[REC_covs=="MeanFlowCumecs"] = "log_MeanFlowCumecs"
 
 
 # Plot covariates transformed and standardised
@@ -220,7 +216,6 @@ for(j in c(1:length(REC_covs))){
 ## Examine years since barrier covariate ##
 
 summary(hab_barrier_full$Years_since_barrier)
-
 summary(scale(hab_barrier_full$Years_since_barrier))
 
 
@@ -236,63 +231,6 @@ dev.off()
 
 
 ###########################################
-
-
-
-
-
-# ##############################################
-# # Examine the correlation amongst covariates #
-# ##############################################
-# 
-# library(corrplot)
-# 
-# hab_REC_full_complete <- hab_REC_full[complete.cases(hab_REC_full[,REC_covs]),REC_covs]
-# 
-# #Standardise before examining:
-# for(j in c(1:length(REC_covs))){
-#   
-#   hab_REC_full_complete[,REC_covs[j]] <- as.vector(scale(hab_REC_full_complete[,REC_covs[j]]))
-#   
-# }
-# 
-# cor(hab_REC_full_complete)
-# 
-# # jpeg(paste0(fig_dir,"/Correlation_plot.jpeg"), height=8, width=8,units="in", res=600)
-# # corrplot(cor(hab_REC_full_complete))
-# # dev.off()
-# 
-# jpeg(paste0(fig_dir,"/Correlation_plot.jpeg"), height=8, width=8,units="in", res=600)
-# corrplot(cor(hab_REC_full_complete), method = "number", number.cex = 0.6, type = 'upper')
-# dev.off()
-# 
-# abs(cor(hab_REC_full_complete))>0.7
-# 
-# #High correlation for variables (greater than 0.7 (Dormann et al 2013: https://doi.org/10.1111/j.1600-0587.2012.07348.x)):
-# # log_FWENZ_usLowFlow, FWENZ_usHard, loc_penpet, us_slope, FWENZ_SegFlowStability
-# # lc_phos, us_phos, loc_psize, FWENZ_USCalcium
-# 
-# hab_REC_full_complete_v2 <- hab_REC_full_complete %>%
-#   select(-c("log_FWENZ_usLowFlow", "FWENZ_usHard", "loc_penpet", "us_slope", "FWENZ_SegFlowStability",
-#             "lc_phos", "us_phos", "loc_psize", "FWENZ_USCalcium"))
-# 
-# 
-# jpeg(paste0(fig_dir,"/Correlation_plot_V2.jpeg"), height=8, width=8,units="in", res=600)
-# corrplot(cor(hab_REC_full_complete_v2), method = "number", number.cex = 0.6, type = 'upper')
-# dev.off()
-# 
-# 
-# #Remove these variables:
-# hab_REC_full <- hab_REC_full %>%
-#   select(-c("log_FWENZ_usLowFlow", "FWENZ_usHard", "loc_penpet", "us_slope", "FWENZ_SegFlowStability",
-#             "lc_phos", "us_phos", "loc_psize", "FWENZ_USCalcium"))
-# 
-# #Remove these variable names
-# REC_covs <- REC_covs[!REC_covs %in% c("log_FWENZ_usLowFlow", "FWENZ_usHard", "loc_penpet", "us_slope", "FWENZ_SegFlowStability",
-#                                       "lc_phos", "us_phos", "loc_psize", "FWENZ_USCalcium")]
-# 
-# 
-# ###########################################
 
 
 #####################################

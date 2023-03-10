@@ -14,7 +14,6 @@ library(readxl)
 ##   Directories   ##
 #####################
 
-data_dir <- "./Data_processed"
 data_taranaki_dir <- "./Data_processed/Taranaki"
 fig_dir <- "./Data_processed/Taranaki/Figures"
 
@@ -26,7 +25,7 @@ fig_dir <- "./Data_processed/Taranaki/Figures"
 ## Taranaki_dams_joined.xlsx is a dataset which I generated in ArcGIS.
 ## This data set was created by joining dam location/year data with barrier locations
 ## in the Taranaki region.
-dam_data <- read_excel(file.path(data_taranaki_dir, "Taranaki_dams_joined.xlsx"))
+dam_data <- read_excel(file.path(data_taranaki_dir, "Manually made data/Taranaki_dams_joined.xlsx"))
 
 colnames(dam_data)
 
