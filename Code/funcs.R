@@ -24,7 +24,7 @@ create_ds_data <- function(data_list){
   for(i in 1:100){
     nextdown <- network %>% filter(child_s %in% nextdown$parent_s)
     save <- unique(rbind.data.frame(save, nextdown))
-    print(nrow(save))
+    #print(nrow(save))
   }
   network_sub <- save
   

@@ -206,6 +206,13 @@ NZFFD_abund <- NZFFD_abund %>% filter(FishMethod == "Electric fishing"| FishMeth
 NZFFD_abund <- NZFFD_abund %>%
   filter((org=="cawthron" | org=="council" | org=="doc" | org=="fish_and_game" | org=="niwa" | org=="university"))
 
+#Examine the sampling purpose and remove if not appropriate
+table(NZFFD_abund$samplingPurpose, useNA = "ifany")
+##Remove "Abundance specific species" and "Presence or absence specific species" as these target species and
+##therefore are more likely biased towards one species
+NZFFD_abund <- NZFFD_abund %>%
+  filter(!(samplingPurpose == "Abundance specific species" | samplingPurpose == "Presence or absence specific species")) #removes 95 samples
+
 
 #check:
 table(NZFFD_abund$institution, is.na(NZFFD_abund$totalCount))
