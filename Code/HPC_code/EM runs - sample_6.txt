@@ -1,0 +1,59 @@
+
+1. Ensure libraries tidyverse, VAST and splines work
+
+2. Ensure EM data is in folder \Models\EMs\EM_data\
+
+3. Ensure funcs.R code is in /Code/ folder
+
+4. Ensure 6_EMs.R is in /Code/ folder
+
+5. Ensure run_command ("HPC") and data_sample (e.g., "sample_6") are specified in the code below
+
+6. Run the following code on the HPC:
+
+cd /nesi/nobackup/niwa03825/ACharsley/VAST_presence_only_integration
+
+nano VAST_ff_EMs_sample_6.sl
+
+######## In sl script write the following:
+
+
+#!/bin/bash -e
+#SBATCH --job-name=VAST_ff_EMs_sample_6 # job name (shows up in the queue)
+#SBATCH --account=niwa03825  #niwa03825 (Toitu Nga Taonga Waimaori) or niwa03347 (Population modelling group)
+#SBATCH --time=5:00:00      # Walltime (HH:MM:SS)
+#SBATCH --mem=32000MB          # Memory in MB 
+#SBATCH --cpus-per-task=6                # test using 2 then 4 and see if the speed increases, if not R
+#SBATCH --mail-user=Anthony.Charsley@niwa.co.nz
+#SBATCH --mail-type=ALL
+#SBATCH --output=VAST_ff_EMs_sample_6_%a.%j.out # Include the job ID in the names of
+#SBATCH --error=VAST_ff_EMs_sample_6_%a.%j.err # the output and error files
+#SBATCH --array=1-160                     # Array jobs
+
+
+taskset -c -p $$          #Prints which CPUs it can use
+module purge #clears any potential environment issues
+module load FriBidi/1.0.12-GCC-11.3.0
+module load HarfBuzz/4.4.1-GCC-11.3.0
+module load UDUNITS/2.2.26-GCCcore-7.4.0 
+module load  R-Geo/4.2.1-gimkl-2022a
+module load devtools
+
+# Help R to flush errors and show overall job progress by printing
+# "executing" and "finished" statements.
+echo "Executing R ..."
+srun Rscript /nesi/nobackup/niwa03825/ACharsley/VAST_presence_only_integration/Code/6_EMs.R "HPC" "sample_6"
+echo "R finished."
+
+
+############## Press ctrl+x and save as VAST_ff_EMs_sample_6.sl
+
+sbatch VAST_ff_EMs_sample_6.sl
+
+###### Check queue
+
+squeue -u charsleyar
+
+#### If I need to cancel
+
+scancel JOBID_[1-25]
