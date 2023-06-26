@@ -99,1301 +99,6 @@ create_ds_data <- function(data_list){
 }
 
 
-# #####################
-# # Testing functions #
-# #####################
-# 
-# make_spatial_info_AC = function( n_x,
-#                                  Lon_i,
-#                                  Lat_i,
-#                                  Extrapolation_List,
-#                                  knot_method = NULL,
-#                                  Method = "Mesh",
-#                                  anisotropic_mesh = NULL,
-#                                  Kmeans = NULL,
-#                                  grid_size_km = 50,
-#                                  grid_size_LL = 1,
-#                                  fine_scale = FALSE,
-#                                  Network_sz_LL = NULL,
-#                                  iter.max = 1000,
-#                                  randomseed = 1,
-#                                  nstart = 100,
-#                                  DirPath = paste0(getwd(),"/"),
-#                                  Save_Results = FALSE,
-#                                  LON_intensity,
-#                                  LAT_intensity,
-#                                  backwards_compatible_kmeans = FALSE,
-#                                  ... ){
-#   
-#   # Deprecated options
-#   if( Method=="Spherical_mesh" ){
-#     stop("Method=`Spherical_mesh` is not being maintained, but please write the package author if you need to explore this option")
-#   }
-#   if( Method == "Stream_network" & fine_scale == TRUE ){
-#     stop("Please use fine_scale=FALSE with stream network spatial model; feature fine_scale=TRUE not yet supported for stream network spatial model.")
-#   }
-#   
-#   # Backwards compatibility for when settings didn't include knot_method, such that settings$knot_method=NULL
-#   if(is.null(knot_method)) knot_method = "samples"
-#   
-#   # Backwards compatible option for different extrapolation grid
-#   if( missing(LON_intensity) & missing(LAT_intensity) ){
-#     if( knot_method=="samples" ){
-#       LON_intensity = Lon_i
-#       LAT_intensity = Lat_i
-#     }
-#     if( knot_method=="grid" ){
-#       which_rows = which( Extrapolation_List$Data_Extrap[,'Include']==TRUE & strip_units(Extrapolation_List[["Area_km2_x"]])>0 & strip_units(rowSums(Extrapolation_List[["a_el"]]))>0 )
-#       LON_intensity = Extrapolation_List$Data_Extrap[ which_rows, 'Lon']
-#       LAT_intensity = Extrapolation_List$Data_Extrap[ which_rows, 'Lat']
-#     }
-#     if( !(knot_method %in% c("samples","grid")) ) stop("`knot_method` must be either `samples` or `grid`")
-#   }
-#   
-#   # Convert to an Eastings-Northings coordinate system
-#   if( Method=="Spherical_mesh" ){
-#     loc_i = data.frame( 'Lon'=Lon_i, 'Lat'=Lat_i )
-#     # Bounds for 2D AR1 grid
-#     Grid_bounds = (grid_size_km/110) * apply(loc_e/(grid_size_km/110), MARGIN=2, FUN=function(vec){trunc(range(vec))+c(0,1)})
-#     
-#     # Calculate k-means centroids
-#     if(is.null(Kmeans)) Kmeans = make_kmeans(n_x=n_x,
-#                                              loc_orig=loc_i[,c("Lon", "Lat")], randomseed=randomseed, kmeans_purpose='spatial', backwards_compatible_kmeans=backwards_compatible_kmeans, ... )
-#     
-#     # Calculate grid for 2D AR1 process
-#     loc_grid = expand.grid( 'Lon'=seq(Grid_bounds[1,1],Grid_bounds[2,1],by=grid_size_LL), 'Lat'=seq(Grid_bounds[1,2],Grid_bounds[2,2],by=grid_size_LL) )
-#     Which = sort(unique(RANN::nn2(data=loc_grid, query=Extrapolation_List$Data_Extrap[which(strip_units(Extrapolation_List$Area_km2_x)>0),c('Lon','Lat')], k=1)$nn.idx[,1]))
-#     loc_grid = loc_grid[Which,]
-#     grid_num = RANN::nn2( data=loc_grid, query=loc_i, k=1)$nn.idx[,1]
-#   }
-#   if( Method %in% c("Mesh","Grid","Stream_network","Barrier") ){
-#     loc_i = project_coordinates( X=Lon_i, Y=Lat_i, projargs=Extrapolation_List$projargs )
-#     loc_intensity = project_coordinates( X=LON_intensity, Y=LAT_intensity, projargs=Extrapolation_List$projargs )
-#     colnames(loc_i) = colnames(loc_intensity) = c("E_km", "N_km")
-#     # Bounds for 2D AR1 grid
-#     Grid_bounds = grid_size_km * apply(Extrapolation_List$Data_Extrap[,c('E_km','N_km')]/grid_size_km, MARGIN=2, FUN=function(vec){trunc(range(vec))+c(0,1)})
-#     
-#     # Calculate k-means centroids
-#     if(is.null(Kmeans)) Kmeans = make_kmeans(n_x=n_x, loc_orig=loc_intensity[,c("E_km", "N_km")], randomseed=randomseed, nstart=nstart,
-#                                              DirPath=DirPath, Save_Results=Save_Results, backwards_compatible_kmeans=backwards_compatible_kmeans )
-#     NN_i = RANN::nn2( data=Kmeans[["centers"]], query=loc_i, k=1)$nn.idx[,1]
-#     
-#     # Calculate grid for 2D AR1 process
-#     loc_grid = expand.grid( 'E_km'=seq(Grid_bounds[1,1],Grid_bounds[2,1],by=grid_size_km), 'N_km'=seq(Grid_bounds[1,2],Grid_bounds[2,2],by=grid_size_km) )
-#     Which = sort(unique(RANN::nn2(data=loc_grid, query=Extrapolation_List$Data_Extrap[which(strip_units(Extrapolation_List$Area_km2_x)>0),c('E_km','N_km')], k=1)$nn.idx[,1]))
-#     loc_grid = loc_grid[Which,]
-#     grid_num = RANN::nn2( data=loc_grid, query=loc_i, k=1)$nn.idx[,1]
-#   }
-#   
-#   # Calc design matrix and areas
-#   if( Method=="Grid" ){
-#     knot_i = grid_num
-#     loc_x = loc_grid
-#   }
-#   if( Method %in% c("Mesh","Spherical_mesh","Barrier") ){
-#     knot_i = NN_i
-#     loc_x = Kmeans[["centers"]]
-#   }
-#   if( Method == "Stream_network" ){
-#     knot_i = Extrapolation_List$Data_Extrap[,"child_i"]
-#     loc_x = project_coordinates( X=Network_sz_LL[,"Lon"], Y=Network_sz_LL[,"Lat"], projargs=Extrapolation_List$projargs )
-#     colnames(loc_x) = c('E_km', 'N_km')
-#   }
-#   
-#   # Bookkeeping for extrapolation-grid
-#   if( fine_scale==FALSE ){
-#     loc_g = loc_x
-#   }
-#   if( fine_scale==TRUE ){
-#     loc_g = Extrapolation_List$Data_Extrap[ which(strip_units(Extrapolation_List$Area_km2_x)>0), c('E_km','N_km') ]
-#   }
-#   
-#   # Convert loc_x back to location in lat-long coordinates latlon_x
-#   #origargs = "+proj=longlat +ellps=WGS84"
-#   origargs = "+proj=longlat +datum=WGS84"
-#   latlon_x = project_coordinates( X=loc_x[,"E_km"], Y=loc_x[,"N_km"], projargs=origargs, origargs=Extrapolation_List$projargs )[,c("Y","X")]
-#   colnames(latlon_x) = c("Lat", "Lon")
-#   
-#   # Convert loc_g back to location in lat-long coordinates latlon_g
-#   latlon_g = project_coordinates( X=loc_g[,"E_km"], Y=loc_g[,"N_km"], projargs=origargs, origargs=Extrapolation_List$projargs )[,c("Y","X")]
-#   colnames(latlon_g) = c("Lat", "Lon")
-#   
-#   # Bundle lat-lon
-#   latlon_i = cbind( 'Lat'=Lat_i, 'Lon'=Lon_i )
-#   
-#   # Make mesh and info for anisotropy  SpatialDeltaGLMM::
-#   # Diagnose issues:  assign("Kmeans", Kmeans, envir = .GlobalEnv)
-#   if(Method != "Stream_network"){
-#     MeshList = make_mesh( Method=Method, loc_x=Kmeans$centers, loc_g=loc_g, loc_i=loc_i, Extrapolation_List=Extrapolation_List,
-#                           fine_scale=fine_scale, anisotropic_mesh=anisotropic_mesh, ... )
-#   }else{
-#     MeshList = make_mesh_AC( Method=Method, loc_x=loc_x, loc_g=loc_g, loc_i=loc_i, Extrapolation_List=Extrapolation_List,
-#                              fine_scale=fine_scale, anisotropic_mesh=anisotropic_mesh, ... )
-#   }
-#   
-#   # Deal with loc_s and latlon_s
-#   if( tolower(Method)=="mesh"){
-#     n_s = MeshList$anisotropic_spde$n.spde
-#     loc_s = MeshList$anisotropic_spde$mesh$loc[,1:2]
-#   }
-#   if( tolower(Method)=="grid"){
-#     n_s = nrow(loc_x)
-#     loc_s = loc_x
-#   }
-#   if( tolower(Method)=="spherical_mesh"){
-#     n_s = MeshList$isotropic_spde$n.spde
-#     loc_s = NA
-#   }
-#   if( tolower(Method)=="stream_network"){
-#     n_s = nrow(loc_x)
-#     loc_s = loc_x
-#   }
-#   if( tolower(Method)=="barrier"){
-#     n_s = MeshList$anisotropic_spde$n.spde
-#     loc_s = MeshList$anisotropic_spde$mesh$loc[,1:2]
-#   }
-#   if(is.na(as.vector(loc_s)[1])){
-#     latlon_s = NA
-#   }else{
-#     colnames(loc_s) = c("E_km", "N_km")
-#     latlon_s = project_coordinates( X=loc_s[,"E_km"], Y=loc_s[,"N_km"], projargs=origargs, origargs=Extrapolation_List$projargs )[,c("Y","X")]
-#     colnames(latlon_s) = c("Lat", "Lon")
-#   }
-#   
-#   # Make matrices for 2D AR1 process
-#   Dist_grid = dist(loc_grid, diag=TRUE, upper=TRUE)
-#   M0 = as( ifelse(as.matrix(Dist_grid)==0, 1, 0), "dgTMatrix" )
-#   M1 = as( ifelse(as.matrix(Dist_grid)==grid_size_km, 1, 0), "dgTMatrix" )
-#   M2 = as( ifelse(as.matrix(Dist_grid)==sqrt(2)*grid_size_km, 1, 0), "dgTMatrix" )
-#   if( Method=="Spherical_mesh" ) GridList = list("M0"=M0, "M1"=M1, "M2"=M2, "grid_size_km"=grid_size_LL)
-#   if( Method %in% c("Mesh","Grid","Stream_network","Barrier") ) GridList = list("M0"=M0, "M1"=M1, "M2"=M2, "grid_size_km"=grid_size_km)
-#   
-#   # Make projection matrices
-#   if( fine_scale==FALSE ){
-#     A_is = matrix(0, nrow=nrow(loc_i), ncol=n_s)
-#     A_is[ cbind(1:nrow(loc_i),knot_i) ] = 1
-#     A_is = as( A_is, "dgTMatrix" )
-#     A_gs = as( diag(n_x), "dgTMatrix" )
-#   }
-#   if( fine_scale==TRUE ){
-#     A_is = INLA::inla.spde.make.A( MeshList$anisotropic_mesh, loc=as.matrix(loc_i) )
-#     if( class(A_is)=="dgCMatrix" ) A_is = as( A_is, "dgTMatrix" )
-#     A_gs = INLA::inla.spde.make.A( MeshList$anisotropic_mesh, loc=as.matrix(loc_g) )
-#     if( class(A_gs)=="dgCMatrix" ) A_gs = as( A_gs, "dgTMatrix" )
-#     Check_i = apply( A_is, MARGIN=1, FUN=function(vec){sum(vec>0)})
-#     Check_g = apply( A_is, MARGIN=1, FUN=function(vec){sum(vec>0)})
-#     if( any(c(Check_i,Check_g) <= 0 ) ){
-#       # stop("Problem with boundary")
-#       # plot(MeshList$anisotropic_mesh)
-#       # points( x=loc_i[which(Check_i!=3),'E_km'], y=loc_i[which(Check_i!=3),'N_km'], col="red" )
-#     }
-#   }
-#   
-#   # Calculate areas
-#   if( Method != "Stream_network" ){
-#     PolygonList = calculate_knot_areas( loc_x=loc_x, Data_Extrap=Extrapolation_List[["Data_Extrap"]], a_el=Extrapolation_List[["a_el"]])
-#     if( fine_scale==FALSE ){
-#       a_gl = PolygonList[["a_xl"]]
-#     }
-#     if( fine_scale==TRUE ){
-#       a_gl = as.matrix(Extrapolation_List[["a_el"]][ which(strip_units(Extrapolation_List$Area_km2_x)>0), ])
-#     }
-#   }else{
-#     PolygonList = NULL
-#     dist_inp = Network_sz_LL[,"dist_s"]
-#     dist_inp[which(is.infinite(dist_inp))] <- 0
-#     a_gl = matrix(dist_inp, nrow=n_x)
-#   }
-#   
-#   # Moving
-#   if( fine_scale==TRUE | Method=="Stream_network" ){
-#     g_e = rep(NA, length(Extrapolation_List[["Area_km2_x"]]))
-#     g_e[ which(strip_units(Extrapolation_List[["Area_km2_x"]])>0) ] = 1:length(which(strip_units(Extrapolation_List[["Area_km2_x"]])>0))
-#   }else{
-#     g_e = PolygonList$NN_Extrap$nn.idx[,1]
-#     g_e[ which(strip_units(Extrapolation_List[["Area_km2_x"]])==0) ] = NA
-#   }
-#   
-#   # Return
-#   Return = list( "fine_scale"=fine_scale, "A_is"=A_is, "A_gs"=A_gs, "n_x"=n_x, "n_s"=n_s, "n_g"=nrow(a_gl), "n_i"=nrow(loc_i),
-#                  "MeshList"=MeshList, "GridList"=GridList, "a_gl"=a_gl, "a_xl"=a_gl, "Kmeans"=Kmeans, "knot_i"=knot_i,
-#                  "loc_i"=as.matrix(loc_i), "loc_x"=as.matrix(loc_x), "loc_g"=as.matrix(loc_g), "loc_s"=as.matrix(loc_s), "g_e"=g_e,
-#                  "Method"=Method, "PolygonList"=PolygonList, "NN_Extrap"=PolygonList$NN_Extrap, "knot_method"=knot_method,
-#                  "latlon_x"=latlon_x, "latlon_g"=latlon_g, "latlon_i"=latlon_i, "latlon_s"=latlon_s )
-#   class(Return) = "make_spatial_info"
-#   return( Return )
-# }
-# 
-# 
-# 
-# 
-# make_mesh_AC <-
-#   function( loc_x,
-#             loc_g,
-#             loc_i,
-#             Method,
-#             Extrapolation_List,
-#             anisotropic_mesh = NULL,
-#             fine_scale = FALSE,
-#             map_data,
-#             ...){
-#     
-#     #######################
-#     # Create the anisotropic SPDE mesh using 2D coordinates
-#     #######################
-#     
-#     # 2D coordinates SPDE
-#     if( is.null(anisotropic_mesh)){
-#       if( fine_scale==FALSE ){
-#         anisotropic_mesh = INLA::inla.mesh.create( loc_x, plot.delay=NULL, ...)
-#       }else{
-#         loc_z = rbind( loc_x, loc_g, loc_i )
-#         outer_hull = INLA::inla.nonconvex.hull( as.matrix(loc_z), convex = -0.05, concave = -0.05)
-#         anisotropic_mesh = INLA::inla.mesh.create( loc_x, plot.delay=NULL, boundary=outer_hull, ...)
-#       }
-#     }
-#     
-#     anisotropic_spde = INLA::inla.spde2.matern(anisotropic_mesh, alpha=2)
-#     
-#     # Pre-processing in R for anisotropy
-#     Dset = 1:2
-#     # Triangle info
-#     TV = anisotropic_mesh$graph$tv       # Triangle to vertex indexing
-#     V0 = anisotropic_mesh$loc[TV[,1],Dset]   # V = vertices for each triangle
-#     V1 = anisotropic_mesh$loc[TV[,2],Dset]
-#     V2 = anisotropic_mesh$loc[TV[,3],Dset]
-#     E0 = V2 - V1                      # E = edge for each triangle
-#     E1 = V0 - V2
-#     E2 = V1 - V0
-#     
-#     # Pre-processing for barriers
-#     # Barriers don't affect projection matrix A
-#     # Obtain polygon for water
-#     if( missing(map_data) ){
-#       map_data = rnaturalearth::ne_countries( scale=switch("medium", "low"=110, "medium"=50, "high"=10, 50) )
-#       attr(map_data,"proj4string") = sp::CRS("+proj=longlat +datum=WGS84")
-#     }
-#     
-#     # Calculate centroid of each triangle in mesh and convert to SpatialPoints
-#     n_triangles = length(anisotropic_mesh$graph$tv[,1])
-#     posTri = matrix(NA, nrow=n_triangles, ncol=2)
-#     for(tri_index in 1:n_triangles){
-#       temp = anisotropic_mesh$loc[ anisotropic_mesh$graph$tv[tri_index,], ]
-#       posTri[tri_index,] = colMeans(temp)[c(1,2)]
-#     }
-#     posTri = sp::SpatialPoints(posTri, proj4string=sp::CRS(Extrapolation_List$projargs) )
-#     posTri = sp::spTransform(posTri, CRSobj=map_data@proj4string )
-#     
-#     # Calculate set of triangles barrier.triangles with centroid over land
-#     if( Method == "Barrier" ){
-#       anisotropic_mesh_triangles_over_land = unlist(sp::over(map_data, posTri, returnList=TRUE))
-#     }else{
-#       anisotropic_mesh_triangles_over_land = vector()
-#     }
-#     #
-#     #plot( x=posTri@coords[,1], y=posTri@coords[,2], col=ifelse(1:n_triangles%in%triangles_over_land,"black","red") )
-#     
-#     #browser()
-#     
-#     # Create Barrier object if requested
-#     # Don't do this unless necessary, because it sometimes throws an error
-#     #Diagnose issues:  assign("anisotropic_mesh", anisotropic_mesh, envir = .GlobalEnv)
-#     if(Method == "Stream_network"){ #AC: I added this if statement
-#       
-#       barrier_list = list(C0 = 0,
-#                           C1 = 0,
-#                           D0 = 0,
-#                           D1 = 0,
-#                           I = 0) #Empty list, 'INLA:::inla.barrier.fem' causes errors with stream networks and no need to run 
-#       
-#     }else{
-#       barrier_finite_elements = INLA:::inla.barrier.fem(mesh=anisotropic_mesh,
-#                                                         barrier.triangles=anisotropic_mesh_triangles_over_land)
-#       barrier_list = list(C0 = barrier_finite_elements$C[[1]],
-#                           C1 = barrier_finite_elements$C[[2]],
-#                           D0 = barrier_finite_elements$D[[1]],
-#                           D1 = barrier_finite_elements$D[[2]],
-#                           I = barrier_finite_elements$I )
-#       # sp::plot( INLA::inla.barrier.polygon(anisotropic_mesh, triangles_over_land) )
-#     }
-#     
-#     
-#     
-#     # Calculate Areas 
-#     crossprod_fn = function(Vec1,Vec2) abs(det( rbind(Vec1,Vec2) ))
-#     Tri_Area = rep(NA, nrow(E0))
-#     for(i in 1:length(Tri_Area)) Tri_Area[i] = crossprod_fn( E0[i,],E1[i,] )/2   # T = area of each triangle
-#     
-#     ################
-#     # Add the isotropic SPDE mesh for spherical or 2D projection, depending upon `Method` input
-#     ################
-#     
-#     # Mesh and SPDE for different inputs
-#     if(Method %in% c("Mesh","Grid","Stream_network","Barrier")){
-#       loc_isotropic_mesh = loc_x
-#       isotropic_mesh = anisotropic_mesh
-#     }
-#     if(Method %in% c("Spherical_mesh")){
-#       loc_isotropic_mesh = INLA::inla.mesh.map(loc_x, projection="longlat", inverse=TRUE) # Project from lat/long to mesh coordinates
-#       isotropic_mesh = INLA::inla.mesh.create( loc_isotropic_mesh, plot.delay=NULL, ...)
-#     }
-#     isotropic_spde = INLA::inla.spde2.matern(isotropic_mesh, alpha=2)
-#     
-#     ####################
-#     # Return stuff
-#     ####################
-#     #if( isotropic_mesh$n != anisotropic_mesh$n ) stop("Check `Calc_Anisotropic_Mesh` for problem")
-#     
-#     Return = list("loc_x"=loc_x, "loc_isotropic_mesh"=loc_isotropic_mesh, "isotropic_mesh"=isotropic_mesh,
-#                   "isotropic_spde"=isotropic_spde, "anisotropic_mesh"=anisotropic_mesh, "anisotropic_spde"=anisotropic_spde,
-#                   "Tri_Area"=Tri_Area, "TV"=TV, "E0"=E0, "E1"=E1, "E2"=E2,
-#                   "anisotropic_mesh_triangles_over_land"=anisotropic_mesh_triangles_over_land, "barrier_list"=barrier_list )
-#     return(Return)
-#   }
-# 
-# 
-# 
-# 
-# make_model_AC <- function( TmbData,
-#             Version,
-#             RhoConfig = c("Beta1" = 0,"Beta2" = 0,"Epsilon1" = 0,"Epsilon2" = 0),
-#             Method = "Mesh",
-#             Npool = 0,
-#             ConvergeTol = 1,
-#             Use_REML = FALSE,
-#             loc_x = NULL,
-#             Parameters = "generate",
-#             Random = "generate",
-#             Map = "generate",
-#             DiagnosticDir = NULL,
-#             TmbDir = system.file("executables",package = "VAST"),
-#             RunDir = getwd(),
-#             CompileDir = TmbDir,
-#             build_model = TRUE,
-#             framework = "TMBad",
-#             intern = FALSE,
-#             inner.control = list(sparse=TRUE, lowrank=TRUE, trace=FALSE),
-#             supernodal = FALSE){
-#     #browser()
-#     
-#     # Extract Options and Options_vec (depends upon version)
-#     if( all(c("Options","Options_vec") %in% names(TmbData)) ){
-#       Options_vec = TmbData$Options_vec
-#       Options = TmbData$Options
-#     }
-#     if( "Options_list" %in% names(TmbData) ){
-#       Options_vec = TmbData$Options_list$Options_vec
-#       Options = TmbData$Options_list$Options
-#     }
-#     
-#     # Augment objects in TmbData (to deal with backwards compatibility)
-#     if( !("n_e" %in% names(TmbData)) ){
-#       TmbData[["n_e"]] = TmbData$n_c
-#     }
-#     if( !("ObsModel_ez" %in% names(TmbData)) ){
-#       TmbData[["ObsModel_ez"]] = rep(1,TmbData[["n_e"]]) %o% TmbData$ObsModel
-#     }
-#     if( !("c_iz" %in% names(TmbData)) ){
-#       TmbData[["c_iz"]] = matrix( TmbData$c_i, ncol=1 )
-#     }
-#     if( !("e_i" %in% names(TmbData)) ){
-#       TmbData[["e_i"]] = TmbData$c_iz[,1]
-#     }
-#     if( !("t_iz" %in% names(TmbData)) ){
-#       TmbData[["t_iz"]] = matrix( TmbData$t_i, ncol=1 )
-#     }
-#     
-#     # Save package version info
-#     capture.output( packageDescription("VAST"), file=paste0(RunDir,"/packageDescription.txt") )
-#     capture.output( packageDescription("FishStatsUtils"), file=paste0(RunDir,"/packageDescription.txt"), append=TRUE )
-#     
-#     # Parameters
-#     # TmbData=TmbData
-#     if( length(Parameters)==1 && Parameters=="generate" ){
-#       Parameters = make_parameters( Version = Version,
-#                                     DataList = TmbData,
-#                                     RhoConfig = RhoConfig )
-#     }
-#     
-#     # Which parameters are turned off
-#     if( length(Map)==1 && Map=="generate" ){
-#       Map = make_map( DataList = TmbData,
-#                       TmbParams = Parameters,
-#                       RhoConfig = RhoConfig,
-#                       Npool = Npool )
-#     }else{
-#       warning( "Please carefully check starting values for all parameters to ensure that mapping off parameters will work as expected.")
-#     }
-#     
-#     # Which are random
-#     # Using redundant parameter names from all past versions, and then eliminating redundancies by checking against contents of Parameters
-#     if( length(Random)==1 && Random=="generate" ){
-#       Random = c("Epsiloninput1_sct", "Omegainput1_sc", "Epsiloninput1_sft", "Omegainput1_sf", "eta1_vf", "Xiinput1_scp", "Phiinput1_sk", "Epsiloninput1_sff",
-#                  "Epsiloninput2_sct", "Omegainput2_sc", "Epsiloninput2_sft", "Omegainput2_sf", "eta2_vf", "Xiinput2_scp", "Phiinput2_sk", "Epsiloninput2_sff",
-#                  "delta_i")
-#       if( RhoConfig[["Beta1"]]%in%c(1,2,4) ) Random = c(Random, "beta1_ct", "beta1_ft")
-#       if( RhoConfig[["Beta2"]]%in%c(1,2,4) ) Random = c(Random, "beta2_ct", "beta2_ft")
-#       if( Use_REML==TRUE ){
-#         Random = union(Random, c("beta1_ct","beta1_ft","gamma1_j","gamma1_tp","gamma1_ctp","lambda1_k","gamma1_cp",
-#                                  "beta2_ct","beta2_ft","gamma2_j","gamma2_tp","gamma2_ctp","lambda2_k","gamma2_cp"))
-#       }
-#       # Avoid problems with mapping
-#       Random = Random[which(Random %in% names(Parameters))]
-#       if( length(Random)==0) Random = NULL
-#     }
-#     
-#     # Bundle for debugging
-#     #Save = list("Map"=Map, "Data"=TmbData, "Parameters"=Parameters, "Random"=Random)
-#     #return(Save)
-#     #on.exit( return(Save) )
-#     #save(Save, file=paste0(RunDir,"/Save.RData"))
-#     
-#     #
-#     
-#     
-#     
-#     if( build_model==FALSE ){
-#       Return = list("Map"=Map, "Data"=TmbData, "Parameters"=Parameters, "Random"=Random)
-#       return( Return )
-#     }
-#     
-#     # Compile TMB software
-#     #dyn.unload( paste0(RunDir,"/",dynlib(TMB:::getUserDLL())) ) # random=Random,
-#     Version_framework = paste0( Version, "_", framework )
-#     file.copy( from=paste0(TmbDir,"/",Version,".cpp"),
-#                to=paste0(CompileDir,"/",Version_framework,".cpp"),
-#                overwrite=FALSE)
-#     origwd = getwd()
-#     on.exit(setwd(origwd),add=TRUE)
-#     setwd( CompileDir )
-#     # SEE https://github.com/kaskr/adcomp/issues/321 for flags argument
-#     if( "framework" %in% formalArgs(TMB::compile)){
-#       TMB::compile( file = paste0(Version_framework,".cpp"),
-#                     framework = framework,
-#                     flags = "-Wno-ignored-attributes -O2 -mfpmath=sse -msse2 -mstackrealign",
-#                     supernodal = supernodal )
-#     }else{
-#       TMB::compile( file = paste0(Version_framework,".cpp"),
-#                     flags = "-Wno-ignored-attributes -O2 -mfpmath=sse -msse2 -mstackrealign" )
-#     }
-#     
-#     # Build object
-#     dyn.load( paste0(CompileDir,"/",TMB::dynlib(Version_framework)) ) # random=Random,
-#     if( ("framework" %in% formalArgs(TMB::compile)) && !is.null(framework) && (framework=="TMBad") ){
-#       #browser()
-#       Obj <- MakeADFun_AC(
-#         data = lapply(TmbData,strip_units),
-#         parameters = Parameters,
-#         hessian = FALSE,
-#         map = Map,
-#         random = Random,
-#         inner.method = "newton",
-#         DLL = Version_framework,
-#         intern = intern,
-#         inner.control = inner.control )  #
-#     }else{
-#       Obj <- TMB::MakeADFun(
-#         data = lapply(TmbData,strip_units),
-#         parameters = Parameters,
-#         hessian = FALSE,
-#         map = Map,
-#         random = Random,
-#         inner.method = "newton",
-#         DLL = Version_framework )  #
-#     }
-#     Obj$control <- list(parscale=1, REPORT=1, reltol=1e-12, maxit=100)
-#     
-#     # Add normalization in
-#     if( Options['normalize_GMRF_in_CPP']==FALSE ){
-#       message("Normalizing GMRF in R using `TMB::normalize` feature")
-#       Obj = TMB::normalize(Obj, flag="include_data", value=FALSE)
-#     }
-#     
-#     # Diagnostic functions (optional)
-#     if( !is.null(DiagnosticDir) ){
-#       Obj$gr_orig = Obj$gr
-#       Obj$fn_orig = Obj$fn
-#       Obj$fn = function( vec ){
-#         utils::capture.output( matrix(vec,ncol=1,dimnames=list(names(Obj$par),NULL)), file=paste0(DiagnosticDir,"fn.txt") )
-#         utils::write.table( matrix(vec,nrow=1), row.names=FALSE, sep=",", col.names=FALSE, append=TRUE, file=paste0(DiagnosticDir,"trace.csv"))
-#         return( Obj$fn_orig(vec) )
-#       }
-#       Obj$gr = function( vec ){
-#         utils::capture.output( matrix(vec,ncol=1,dimnames=list(names(Obj$par),NULL)), file=paste0(DiagnosticDir,"gr.txt") )
-#         return( Obj$gr_orig(vec) )
-#       }
-#       utils::write.table( matrix(Obj$par,nrow=1), row.names=FALSE, sep=",", col.names=FALSE, file=paste0(DiagnosticDir,"trace.csv"))
-#     }
-#     
-#     # Local functions
-#     boundsifpresent_fn = function( par, map, name, lower, upper, bounds ){
-#       if( name %in% names(par) ){
-#         bounds[grep(name,names(par)),c('Lower','Upper')] = rep(1,length(grep(name,names(par)))) %o% c(lower,upper)
-#       }
-#       return( bounds )
-#     }
-#     
-#     # Declare upper and lower bounds for parameter search
-#     Bounds = matrix( NA, ncol=2, nrow=length(Obj$par), dimnames=list(names(Obj$par),c("Lower","Upper")) )
-#     Bounds[,'Lower'] = rep(-Inf, length(Obj$par))
-#     Bounds[,'Upper'] = rep( Inf, length(Obj$par))
-#     Bounds[grep("SigmaM",names(Obj$par)),'Upper'] = 10 # ZINB can crash if it gets > 20
-#     if( any(TmbData$ObsModel_ez[1,]==8) ) Bounds[grep("SigmaM",names(Obj$par)),'Upper'] = 3 # Tweedie can crash if logSigmaM gets too high
-#     if( !is.null(loc_x) && !is.na(Options_vec['Method']) && Options_vec['Method']==0 && Method!="Spherical_mesh" ){
-#       Dist = stats::dist(loc_x)
-#       Bounds[grep("logkappa",names(Obj$par)),'Lower'] = log( sqrt(8)/max(Dist) ) # Range = nu*sqrt(8)/kappa
-#       Bounds[grep("logkappa",names(Obj$par)),'Upper'] = log( sqrt(8)/min(Dist) ) # Range = nu*sqrt(8)/kappa
-#     }
-#     if( !is.na(Options_vec['Method']) && Options_vec['Method']==1 && Method!="Spherical_mesh" ){
-#       Bounds[grep("logkappa",names(Obj$par)),'Upper'] = log(0.9999) # Must be negative, so that Rho<1
-#     }
-#     Bounds = boundsifpresent_fn( par=Obj$par, name="ln_H_input", lower=-5, upper=5, bounds=Bounds)
-#     Bounds = boundsifpresent_fn( par=Obj$par, name="gamma1", lower=-20, upper=20, bounds=Bounds)
-#     Bounds = boundsifpresent_fn( par=Obj$par, name="gamma2", lower=-20, upper=20, bounds=Bounds)
-#     Bounds = boundsifpresent_fn( par=Obj$par, name="lambda1", lower=-20, upper=20, bounds=Bounds)
-#     Bounds = boundsifpresent_fn( par=Obj$par, name="lambda2", lower=-20, upper=20, bounds=Bounds)
-#     Bounds = boundsifpresent_fn( par=Obj$par, name="Beta_rho1", lower=-0.99, upper=0.99, bounds=Bounds)
-#     Bounds = boundsifpresent_fn( par=Obj$par, name="Beta_rho2", lower=-0.99, upper=0.99, bounds=Bounds)
-#     Bounds = boundsifpresent_fn( par=Obj$par, name="Beta_rho1_f", lower=-0.99, upper=0.99, bounds=Bounds)
-#     Bounds = boundsifpresent_fn( par=Obj$par, name="Beta_rho2_f", lower=-0.99, upper=0.99, bounds=Bounds)
-#     Bounds = boundsifpresent_fn( par=Obj$par, name="Epsilon_rho1", lower=-0.99, upper=0.99, bounds=Bounds)
-#     Bounds = boundsifpresent_fn( par=Obj$par, name="Epsilon_rho2", lower=-0.99, upper=0.99, bounds=Bounds)
-#     Bounds = boundsifpresent_fn( par=Obj$par, name="Epsilon_rho1_f", lower=-0.99, upper=0.99, bounds=Bounds)
-#     Bounds = boundsifpresent_fn( par=Obj$par, name="Epsilon_rho2_f", lower=-0.99, upper=0.99, bounds=Bounds)
-#     Bounds = boundsifpresent_fn( par=Obj$par, name="rho_c1", lower=-0.99, upper=0.99, bounds=Bounds)
-#     Bounds = boundsifpresent_fn( par=Obj$par, name="rho_c2", lower=-0.99, upper=0.99, bounds=Bounds)
-#     if( ("n_f_input"%in%names(TmbData)) && TmbData[["n_f_input"]]==0 ){
-#       Bounds = boundsifpresent_fn( par=Obj$par, name="L1_z", lower=c(-Inf,-0.99), upper=c(Inf,0.99), bounds=Bounds)
-#       Bounds = boundsifpresent_fn( par=Obj$par, name="L2_z", lower=c(-Inf,-0.99), upper=c(Inf,0.99), bounds=Bounds)
-#     }
-#     if( ("OverdispersionConfig"%in%names(TmbData)) ){
-#       if( TmbData[["OverdispersionConfig"]][1]==0 ) Bounds = boundsifpresent_fn( par=Obj$par, name="L1_z", lower=c(-Inf,-0.99), upper=c(Inf,0.99), bounds=Bounds)
-#       if( TmbData[["OverdispersionConfig"]][2]==0 ) Bounds = boundsifpresent_fn( par=Obj$par, name="L2_z", lower=c(-Inf,-0.99), upper=c(Inf,0.99), bounds=Bounds)
-#     }
-#     #for(i in 1:4){
-#     #  if( TmbData[["FieldConfig"]][i]==0 ){
-#     #    Bounds = boundsifpresent_fn( par=Obj$par, name=c("L_omega1_z","L_epsilon1_z","L_omega2_z","L_epsilon2_z")[i], lower=c(-Inf,-0.99), upper=c(Inf,0.99), bounds=Bounds)
-#     #  }
-#     #}
-#     
-#     # Change convergence tolerance
-#     Obj$env$inner.control$step.tol <- c(1e-8,1e-12,1e-15)[ConvergeTol] # Default : 1e-8  # Change in parameters limit inner optimization
-#     Obj$env$inner.control$tol10 <- c(1e-6,1e-8,1e-12)[ConvergeTol]  # Default : 1e-3     # Change in pen.like limit inner optimization
-#     Obj$env$inner.control$grad.tol <- c(1e-8,1e-12,1e-15)[ConvergeTol] # # Default : 1e-8  # Maximum gradient limit inner optimization
-#     
-#     # Print number of parameters
-#     ThorsonUtilities::list_parameters( Obj )
-#     
-#     # Return stuff
-#     Return = list("Obj"=Obj, "Upper"=Bounds[,'Upper'], "Lower"=Bounds[,'Lower'], "Parameters"=Parameters, "Map"=Map, "Random"=Random)
-#     class(Return) = "make_model"
-#     return( Return )
-#   }
-# 
-# 
-# 
-# MakeADFun_AC <- function (data, parameters, map = list(), type = c("ADFun", 
-#                                                                    "Fun", "ADGrad"[!intern && (!is.null(random) || 
-#                                                                                                  !is.null(profile))]), random = NULL, profile = NULL, 
-#                           random.start = expression(last.par.best[random]), hessian = FALSE, 
-#                           method = "BFGS", inner.method = "newton", inner.control = list(maxit = 1000), 
-#                           MCcontrol = list(doMC = FALSE, seed = 123, n = 100), ADreport = FALSE, 
-#                           atomic = TRUE, LaplaceNonZeroGradient = FALSE, DLL = getUserDLL(), 
-#                           checkParameterOrder = TRUE, regexp = FALSE, silent = FALSE, 
-#                           intern = FALSE, integrate = NULL, ...) 
-# {
-#   if (!DLL %in% names(getLoadedDLLs())) {
-#     stop(sprintf("'%s' was not found in the list of loaded DLLs. Forgot to dyn.load(dynlib('%s')) ?", 
-#                  DLL, DLL))
-#   }
-#   env <- environment()
-#   if (!is.list(data)) 
-#     stop("'data' must be a list")
-#   ok <- function(x) (is.matrix(x) | is.vector(x) | is.array(x)) & 
-#     (is.numeric(x) | is.logical(x))
-#   ok.data <- function(x) ok(x) | is.factor(x) | is(x, "sparseMatrix") | 
-#     is.list(x) | (is.character(x) & length(x) == 1)
-#   check.passed <- function(x) {
-#     y <- attr(x, "check.passed")
-#     if (is.null(y)) 
-#       FALSE
-#     else y
-#   }
-#   if (!check.passed(data)) {
-#     if (!all(sapply(data, ok.data))) {
-#       cat("Problem with these data entries:\n")
-#       print(which(!sapply(data, ok.data)))
-#       stop("Only numeric matrices, vectors, arrays, ", 
-#            "factors, lists or length-1-characters ", 
-#            "can be interfaced")
-#     }
-#   }
-#   if (!check.passed(parameters)) {
-#     if (!all(sapply(parameters, ok))) {
-#       cat("Problem with these parameter entries:\n")
-#       print(which(!sapply(parameters, ok)))
-#       stop("Only numeric matrices, vectors and arrays ", 
-#            "can be interfaced")
-#     }
-#   }
-#   if (length(data)) {
-#     dataSanitize <- function(x) {
-#       if (is.list(x)) 
-#         return(lapply(x, dataSanitize))
-#       if (is(x, "sparseMatrix")) {
-#         x <- as(x, "TsparseMatrix")
-#       }
-#       else if (is.character(x)) {
-#       }
-#       else {
-#         if (is.factor(x)) 
-#           x <- unclass(x) - 1L
-#         storage.mode(x) <- "double"
-#       }
-#       x
-#     }
-#     if (!check.passed(data)) {
-#       data <- lapply(data, dataSanitize)
-#     }
-#     attr(data, "check.passed") <- TRUE
-#   }
-#   if (length(parameters)) {
-#     parameterSanitize <- function(x) {
-#       storage.mode(x) <- "double"
-#       x
-#     }
-#     if (!check.passed(parameters)) {
-#       parameters <- lapply(parameters, parameterSanitize)
-#     }
-#     attr(parameters, "check.passed") <- TRUE
-#   }
-#   
-#   browser()
-#   
-#   if (checkParameterOrder) {
-#     parNameOrder <- getParameterOrder(data, parameters, new.env(), 
-#                                       DLL = DLL)
-#     if (!identical(names(parameters), parNameOrder)) {
-#       if (!silent) 
-#         cat("Order of parameters:\n")
-#       if (!silent) 
-#         print(names(parameters))
-#       if (!silent) 
-#         cat("Not matching template order:\n")
-#       if (!silent) 
-#         print(parNameOrder)
-#       keepAttrib(parameters) <- parameters[parNameOrder]
-#       if (!silent) 
-#         cat("Your parameter list has been re-ordered.\n(Disable this warning with checkParameterOrder=FALSE)\n")
-#     }
-#   }
-#   if (length(map) > 0) {
-#     ok <- all(names(map) %in% names(parameters))
-#     if (!ok) 
-#       stop("Names in map must correspond to parameter names")
-#     ok <- all(sapply(map, is.factor))
-#     if (!ok) 
-#       stop("map must contain factors")
-#     ok <- sapply(parameters[names(map)], length) == sapply(map, 
-#                                                            length)
-#     if (!all(ok)) 
-#       stop("A map factor length must equal parameter length")
-#     param.map <- lapply(names(map), function(nam) {
-#       updateMap(parameters[[nam]], map[[nam]])
-#     })
-#     keepAttrib(parameters[names(map)]) <- param.map
-#   }
-#   lrandom <- function() {
-#     ans <- logical(length(par))
-#     ans[random] <- TRUE
-#     ans
-#   }
-#   lfixed <- function() {
-#     !lrandom()
-#   }
-#   parList <- function(x = par[lfixed()], par = last.par) {
-#     ans <- parameters
-#     nonemp <- sapply(ans, function(x) length(x) > 0)
-#     nonempindex <- which(nonemp)
-#     skeleton <- as.relistable(ans[nonemp])
-#     par[lfixed()] <- x
-#     li <- relist(par, skeleton)
-#     reshape <- function(x) {
-#       if (is.null(attr(x, "map"))) 
-#         return(x)
-#       y <- attr(x, "shape")
-#       f <- attr(x, "map")
-#       i <- which(f >= 0)
-#       y[i] <- x[f[i] + 1]
-#       y
-#     }
-#     for (i in seq(skeleton)) {
-#       ans[[nonempindex[i]]][] <- as.vector(li[[i]])
-#     }
-#     for (i in seq(ans)) {
-#       ans[[i]] <- reshape(ans[[i]])
-#     }
-#     ans
-#   }
-#   type <- match.arg(type, eval(type), several.ok = TRUE)
-#   reportenv <- new.env()
-#   par <- NULL
-#   last.par.ok <- last.par <- last.par1 <- last.par2 <- last.par.best <- NULL
-#   value.best <- Inf
-#   ADFun <- NULL
-#   Fun <- NULL
-#   ADGrad <- NULL
-#   tracepar <- FALSE
-#   validpar <- function(x) TRUE
-#   tracemgc <- TRUE
-#   L.created.by.newton <- skipFixedEffects <- spHess <- NULL
-#   beSilent <- function() {
-#     tracemgc <<- FALSE
-#     inner.control$trace <<- FALSE
-#     silent <<- TRUE
-#     cf <- config(DLL = DLL)
-#     i <- grep("^trace.", names(cf))
-#     cf[i] <- 0
-#     cf$DLL <- DLL
-#     do.call(config, cf)
-#     NULL
-#   }
-#   if (silent) 
-#     beSilent()
-#   ADreportDims <- NULL
-#   ADreportIndex <- function() {
-#     lngt <- sapply(ADreportDims, prod)
-#     offset <- head(cumsum(c(1, lngt)), -1)
-#     ans <- lapply(seq_along(lngt), function(i) array(seq(from = offset[i], 
-#                                                          length.out = lngt[i]), ADreportDims[[i]]))
-#     names(ans) <- names(ADreportDims)
-#     ans
-#   }
-#   .random <- random
-#   retape <- function(set.defaults = TRUE) {
-#     omp <- config(DLL = DLL)
-#     random <<- .random
-#     if (atomic) {
-#       Fun <<- MakeDoubleFunObject(data, parameters, reportenv, 
-#                                   DLL = DLL)
-#       out <- EvalDoubleFunObject(Fun, unlist(parameters), 
-#                                  get_reportdims = TRUE)
-#       ADreportDims <<- attr(out, "reportdims")
-#     }
-#     if (is.character(profile)) {
-#       random <<- c(random, profile)
-#     }
-#     if (is.character(random)) {
-#       if (!regexp) {
-#         if (!all(random %in% names(parameters))) {
-#           cat("Some 'random' effect names does not match 'parameter' list:\n")
-#           print(setdiff(random, names(parameters)))
-#           cat("(Note that regular expression match is disabled by default)\n")
-#           stop()
-#         }
-#         if (any(duplicated(random))) {
-#           cat("Duplicates in 'random' - will be removed\n")
-#           random <<- unique(random)
-#         }
-#         tmp <- lapply(parameters, function(x) x * 0)
-#         tmp[random] <- lapply(tmp[random], function(x) x * 
-#                                 0 + 1)
-#         random <<- which(as.logical(unlist(tmp)))
-#         if (length(random) == 0) 
-#           random <<- NULL
-#       }
-#       if (regexp) {
-#         random <<- grepRandomParameters(parameters, random)
-#         if (length(random) == 0) {
-#           cat("Selected random effects did not match any model parameters.\n")
-#           random <<- NULL
-#         }
-#       }
-#       if (is.character(profile)) {
-#         tmp <- lapply(parameters, function(x) x * 0)
-#         tmp[profile] <- lapply(tmp[profile], function(x) x * 
-#                                  0 + 1)
-#         profile <<- match(which(as.logical(unlist(tmp))), 
-#                           random)
-#         if (length(profile) == 0) 
-#           random <<- NULL
-#         if (any(duplicated(profile))) 
-#           stop("Profile parameter vector not unique.")
-#         tmp <- rep(0L, length(random))
-#         tmp[profile] <- 1L
-#         profile <<- tmp
-#       }
-#       if (set.defaults) {
-#         par <<- unlist(parameters)
-#       }
-#     }
-#     if ("ADFun" %in% type) {
-#       if (omp$autopar) 
-#         openmp(1, DLL = DLL)
-#       ADFun <<- MakeADFunObject(data, parameters, reportenv, 
-#                                 ADreport = ADreport, DLL = DLL)
-#       if (omp$autopar) 
-#         openmp(omp$nthreads, DLL = DLL)
-#       if (!is.null(integrate)) {
-#         nm <- sapply(parameters, length)
-#         nmpar <- rep(names(nm), nm)
-#         for (i in seq_along(integrate)) {
-#           I <- integrate[i]
-#           if (is.null(names(I)) || names(I) == "") {
-#             I <- I[[1]]
-#           }
-#           ok <- all(names(I) %in% nmpar[random])
-#           if (!ok) 
-#             stop("Names to be 'integrate'd must be among the random parameters")
-#           w <- which(nmpar[random] %in% names(I))
-#           arg_which <- I[[1]]$which
-#           if (!is.null(arg_which)) 
-#             w <- w[arg_which]
-#           method <- sapply(I, function(x) x$method)
-#           ok <- all(duplicated(method)[-1])
-#           if (!ok) 
-#             stop("Grouping only allowed for identical methods")
-#           method <- method[1]
-#           cfg <- NULL
-#           if (method == "marginal_sr") {
-#             fac <- factor(nmpar[random[w]], levels = names(I))
-#             cfg <- list(grid = I, random2grid = fac)
-#           }
-#           else {
-#             cfg <- I[[1]]
-#           }
-#           stopifnot(is.list(cfg))
-#           TransformADFunObject(ADFun, method = method, 
-#                                random_order = random[w], config = cfg, mustWork = 1L)
-#           activeDomain <- as.logical(info(ADFun)$activeDomain)
-#           random_remove <- random[w][!activeDomain[random[w]]]
-#           TransformADFunObject(ADFun, method = "remove_random_parameters", 
-#                                random_order = random_remove, mustWork = 1L)
-#           attr(ADFun$ptr, "par") <- attr(ADFun$ptr, 
-#                                          "par")[-random_remove]
-#           par_mask <- rep(FALSE, length(attr(ADFun$ptr, 
-#                                              "par")))
-#           par_mask[random] <- TRUE
-#           par <<- par[-random_remove]
-#           nmpar <- nmpar[-random_remove]
-#           par_mask <- par_mask[-random_remove]
-#           random <<- which(par_mask)
-#           if (length(random) == 0) {
-#             random <<- NULL
-#             type <<- setdiff(type, "ADGrad")
-#           }
-#           if (config(DLL = DLL)$optimize.instantly) {
-#             TransformADFunObject(ADFun, method = "optimize", 
-#                                  mustWork = 1L)
-#           }
-#         }
-#       }
-#       if (intern) {
-#         cfg <- inner.control
-#         if (is.null(cfg$sparse)) 
-#           cfg$sparse <- TRUE
-#         cfg <- lapply(cfg, as.double)
-#         TransformADFunObject(ADFun, method = "laplace", 
-#                              config = cfg, random_order = random, mustWork = 1L)
-#         TransformADFunObject(ADFun, method = "remove_random_parameters", 
-#                              random_order = random, mustWork = 1L)
-#         attr(ADFun$ptr, "par") <- attr(ADFun$ptr, 
-#                                        "par")[-random]
-#         par <<- par[-random]
-#         random <<- NULL
-#         if (config(DLL = DLL)$optimize.instantly) {
-#           TransformADFunObject(ADFun, method = "optimize", 
-#                                mustWork = 1L)
-#         }
-#       }
-#       if (set.defaults) {
-#         par <<- attr(ADFun$ptr, "par")
-#         last.par <<- par
-#         last.par1 <<- par
-#         last.par2 <<- par
-#         last.par.best <<- par
-#         value.best <<- Inf
-#       }
-#     }
-#     if (omp$autopar && !ADreport) {
-#       TransformADFunObject(ADFun, method = "parallel_accumulate", 
-#                            num_threads = as.integer(openmp(DLL = DLL)), 
-#                            mustWork = 0L)
-#     }
-#     if (length(random) > 0) {
-#       TransformADFunObject(ADFun, method = "reorder_random", 
-#                            random_order = random, mustWork = 0L)
-#     }
-#     if ("Fun" %in% type) {
-#       Fun <<- MakeDoubleFunObject(data, parameters, reportenv, 
-#                                   DLL = DLL)
-#     }
-#     if ("ADGrad" %in% type) {
-#       retape_adgrad(lazy = TRUE)
-#     }
-#     env$skipFixedEffects <- !is.null(ADGrad)
-#     delayedAssign("spHess", sparseHessianFun(env, skipFixedEffects = skipFixedEffects), 
-#                   assign.env = env)
-#   }
-#   retape_adgrad <- function(lazy = TRUE) {
-#     if (!lazy) 
-#       random <- NULL
-#     ADGrad <<- MakeADGradObject(data, parameters, reportenv, 
-#                                 random = random, f = ADFun$ptr, DLL = DLL)
-#   }
-#   retape(set.defaults = TRUE)
-#   usingAtomics <- function() .Call("usingAtomics", PACKAGE = DLL)
-#   .data <- NULL
-#   f <- function(theta = par, order = 0, type = "ADdouble", 
-#                 cols = NULL, rows = NULL, sparsitypattern = 0, rangecomponent = 1, 
-#                 rangeweight = NULL, dumpstack = 0, doforward = 1, do_simulate = 0, 
-#                 set_tail = 0, keepx = NULL, keepy = NULL) {
-#     if (isNullPointer(ADFun$ptr)) {
-#       if (silent) 
-#         beSilent()
-#       retape(set.defaults = FALSE)
-#     }
-#     data_changed <- !identical(.data, data)
-#     if (data_changed) {
-#       .data <<- data
-#     }
-#     switch(type, ADdouble = {
-#       res <- EvalADFunObject(ADFun, theta, order = order, 
-#                              hessiancols = cols, hessianrows = rows, sparsitypattern = sparsitypattern, 
-#                              rangecomponent = rangecomponent, rangeweight = rangeweight, 
-#                              dumpstack = dumpstack, doforward = doforward, 
-#                              set_tail = set_tail, data_changed = data_changed)
-#       last.par <<- theta
-#       if (order == 1) last.par1 <<- theta
-#       if (order == 2) last.par2 <<- theta
-#     }, double = {
-#       res <- EvalDoubleFunObject(Fun, theta, do_simulate = do_simulate)
-#     }, ADGrad = {
-#       res <- EvalADFunObject(ADGrad, theta, order = order, 
-#                              hessiancols = cols, hessianrows = rows, sparsitypattern = sparsitypattern, 
-#                              rangecomponent = rangecomponent, rangeweight = rangeweight, 
-#                              dumpstack = dumpstack, doforward = doforward, 
-#                              set_tail = set_tail, keepx = keepx, keepy = keepy, 
-#                              data_changed = data_changed)
-#     }, stop("invalid 'type'"))
-#     res
-#   }
-#   h <- function(theta = par, order = 0, hessian, L, ...) {
-#     if (order == 0) {
-#       logdetH <- 2 * determinant(L)$mod
-#       ans <- f(theta, order = 0) + 0.5 * logdetH - length(random)/2 * 
-#         log(2 * pi)
-#       if (LaplaceNonZeroGradient) {
-#         grad <- f(theta, order = 1)[random]
-#         ans - 0.5 * sum(grad * as.numeric(solveCholesky(L, 
-#                                                         grad)))
-#       }
-#       else ans
-#     }
-#     else if (order == 1) {
-#       if (LaplaceNonZeroGradient) 
-#         stop("Not correct for LaplaceNonZeroGradient=TRUE")
-#       e <- environment(spHess)
-#       solveSubset <- function(L) .Call("tmb_invQ", 
-#                                        L, PACKAGE = "TMB")
-#       solveSubset2 <- function(L) .Call("tmb_invQ_tril_halfdiag", 
-#                                         L, PACKAGE = "TMB")
-#       ihessian <- solveSubset2(L)
-#       if (!is.null(profile)) {
-#         perm <- L@perm + 1L
-#         ihessian <- .Call("tmb_sparse_izamd", ihessian, 
-#                           profile[perm], 0, PACKAGE = "TMB")
-#       }
-#       lookup <- function(A, B, r = NULL) {
-#         A <- tril(A)
-#         B <- tril(B)
-#         B@x[] <- seq.int(length.out = length(B@x))
-#         if (!is.null(r)) {
-#           B <- .Call("tmb_half_diag", B, PACKAGE = "TMB")
-#           B <- tril(B[r, r, drop = FALSE]) + tril(t(B)[r, 
-#                                                        r, drop = FALSE])
-#         }
-#         m <- .Call("match_pattern", A, B, PACKAGE = "TMB")
-#         B@x[m]
-#       }
-#       if (is.null(e$ind1)) {
-#         if (!silent) 
-#           cat("Matching hessian patterns... ")
-#         iperm <- invPerm(L@perm + 1L)
-#         e$ind1 <- lookup(hessian, ihessian, iperm)
-#         e$ind2 <- lookup(hessian, e$Hfull, random)
-#         if (!silent) 
-#           cat("Done\n")
-#       }
-#       w <- rep(0, length = length(e$Hfull@x))
-#       w[e$ind2] <- ihessian@x[e$ind1]
-#       as.vector(f(theta, order = 1)) + EvalADFunObject(e$ADHess, 
-#                                                        theta, order = 1, rangeweight = w)
-#     }
-#     else stop(sprintf("'order'=%d not yet implemented", 
-#                       order))
-#   }
-#   ff <- function(par.fixed = par[-random], order = 0, ...) {
-#     names(par.fixed) <- names(par[-random])
-#     f0 <- function(par.random, order = 0, ...) {
-#       par[random] <- par.random
-#       par[-random] <- par.fixed
-#       res <- f(par, order = order, set_tail = random[1], 
-#                ...)
-#       switch(order + 1, res, res[random], res[random, random])
-#     }
-#     H0 <- function(par.random) {
-#       par[random] <- par.random
-#       par[-random] <- par.fixed
-#       spHess(par, random = TRUE, set_tail = random[1])
-#     }
-#     if (inner.method == "newton") {
-#       opt <- try(do.call("newton", c(list(par = eval(random.start), 
-#                                           fn = f0, gr = function(x) f0(x, order = 1), he = H0, 
-#                                           env = env), inner.control)), silent = silent)
-#       if (inherits(opt, "try-error") || !is.finite(opt$value)) {
-#         if (order == 0) 
-#           return(NaN)
-#         if (order == 1) 
-#           stop("inner newton optimization failed during gradient calculation")
-#         stop("invalid 'order'")
-#       }
-#     }
-#     else {
-#       opt <- optim(eval(random.start), fn = f0, gr = function(x) f0(x, 
-#                                                                     order = 1), method = inner.method, control = inner.control)
-#     }
-#     par[random] <- opt$par
-#     par[-random] <- par.fixed
-#     if (!skipFixedEffects) {
-#       hess <- spHess(par)
-#       hessian <- hess[random, random]
-#     }
-#     else {
-#       hessian <- spHess(par, random = TRUE)
-#     }
-#     if (!is.null(profile)) {
-#       hessian <- .Call("tmb_sparse_izamd", hessian, 
-#                        profile, 1, PACKAGE = "TMB")
-#     }
-#     if (inherits(env$L.created.by.newton, "dCHMsuper")) {
-#       L <- env$L.created.by.newton
-#       updateCholesky(L, hessian)
-#     }
-#     else L <- Cholesky(hessian, perm = TRUE, LDL = FALSE, 
-#                        super = TRUE)
-#     if (order == 0) {
-#       res <- h(par, order = 0, hessian = hessian, L = L)
-#       if (!is.null(profile)) {
-#         res <- res + sum(profile)/2 * log(2 * pi)
-#       }
-#       if (is.finite(res)) {
-#         if (res < value.best) {
-#           last.par.best <<- par
-#           value.best <<- res
-#         }
-#       }
-#     }
-#     if (order == 1) {
-#       grad <- h(par, order = 1, hessian = hessian, L = L)
-#       if (!is.null(profile)) {
-#         if (!skipFixedEffects) {
-#           hess <- spHess(par)
-#           hessian <- hess[random, random]
-#         }
-#         else {
-#           hessian <- spHess(par, random = TRUE)
-#         }
-#         updateCholesky(L, hessian)
-#       }
-#       if (!skipFixedEffects) {
-#         res <- grad[-random] - hess[-random, random] %*% 
-#           as.vector(solveCholesky(L, grad[random]))
-#       }
-#       else {
-#         w <- rep(0, length(par))
-#         w[random] <- as.vector(solveCholesky(L, grad[random]))
-#         res <- grad[-random] - f(par, order = 1, type = "ADGrad", 
-#                                  rangeweight = w)[-random]
-#       }
-#       res <- drop(res)
-#     }
-#     if (order == 2) {
-#       n <- length(par)
-#       nr <- length(random)
-#       nf <- n - nr
-#       fixed <- setdiff(1:n, random)
-#       D1h <- h(par, order = 1)
-#       D2h <- h(par, order = 2)
-#       D2f <- f(par, order = 2, cols = random)
-#       D3f <- sapply(random, function(i) f(par, type = "ADGrad", 
-#                                           order = 2, rangecomponent = i))
-#       I.D2f <- solve(D2f[random, ])
-#       D1eta <- -t(D2f[-random, ] %*% I.D2f)
-#       D3f.D1eta <- D3f %*% D1eta
-#       dim(D3f.D1eta) <- c(n, n, nf)
-#       dim(D3f) <- c(n, n, nr)
-#       D3f.fixed <- D3f[fixed, , ]
-#       D2eta <- sapply(1:nf, function(i) {
-#         -I.D2f %*% (t(D3f.fixed[i, fixed, ]) + D3f.D1eta[random, 
-#                                                          fixed, i] + (D3f.fixed[i, random, ] + D3f.D1eta[random, 
-#                                                                                                          random, i]) %*% D1eta)
-#       })
-#       dim(D2eta) <- c(nr, nf, nf)
-#       D2h.fixed <- D2h[fixed, ]
-#       res <- sapply(1:nf, function(i) {
-#         D2h.fixed[i, fixed] + t(D2h.fixed[, random] %*% 
-#                                   D1eta[, i]) + (t(D2h.fixed[i, random]) + t(D2h[random, 
-#                                                                                  random] %*% D1eta[, i])) %*% D1eta + D1h[, 
-#                                                                                                                           random] %*% D2eta[, , i]
-#       })
-#       attr(res, "D2eta") <- D2eta
-#       attr(res, "D1eta") <- D1eta
-#     }
-#     if (all(is.finite(res))) 
-#       last.par.ok <<- par
-#     res
-#   }
-#   MC <- function(par = last.par, par0 = last.par.best, n = 100, 
-#                  order = 0, seed = NULL, antithetic = TRUE, keep = FALSE, 
-#                  phi = NULL, ...) {
-#     if (is.numeric(seed)) 
-#       set.seed(seed)
-#     last.par.old <- last.par
-#     last.par.best.old <- last.par.best
-#     on.exit({
-#       last.par <<- last.par.old
-#       last.par.best <<- last.par.best.old
-#     })
-#     h <- spHess(par0, random = TRUE)
-#     L <- L.created.by.newton
-#     updateCholesky(L, h)
-#     rmvnorm <- function(n) {
-#       u <- matrix(rnorm(ncol(L) * n), ncol(L), n)
-#       u <- solve(L, u, system = "Lt")
-#       u <- solve(L, u, system = "Pt")
-#       as.matrix(u)
-#     }
-#     M.5.log2pi <- -0.5 * log(2 * pi)
-#     logdmvnorm <- function(u) {
-#       logdetH.5 <- determinant(L, logarithm = TRUE)$modulus
-#       nrow(h) * M.5.log2pi + logdetH.5 - 0.5 * colSums(u * 
-#                                                          as.matrix(h %*% u))
-#     }
-#     eval.target <- function(u, order = 0) {
-#       par[random] <- u
-#       f(par, order = order)
-#     }
-#     samples <- rmvnorm(n)
-#     if (antithetic) 
-#       samples <- cbind(samples, -samples)
-#     log.density.propose <- logdmvnorm(samples)
-#     samples <- samples + par0[random]
-#     log.density.target <- -apply(samples, 2, eval.target)
-#     log.density.target[is.nan(log.density.target)] <- -Inf
-#     I <- log.density.target - log.density.propose
-#     M <- max(I)
-#     if (order >= 1) {
-#       vec <- exp(I - M)
-#       p <- vec/sum(vec)
-#       i <- (p > 0)
-#       p <- p[i]
-#       I1 <- apply(samples[, i, drop = FALSE], 2, eval.target, 
-#                   order = 1)[-random, , drop = FALSE]
-#       gr <- as.vector(I1 %*% p)
-#       if (order == 1) 
-#         return(gr)
-#     }
-#     if (!is.null(phi)) {
-#       phival <- apply(samples, 2, phi)
-#       if (is.null(dim(phival))) 
-#         phival <- t(phival)
-#       p <- exp(I - M)
-#       p <- p/sum(p)
-#       ans <- phival %*% p
-#       return(ans)
-#     }
-#     value <- -log(mean(exp(I - M))) - M
-#     ci <- 1.96 * sd(exp(I - M))/sqrt(n)
-#     attr(value, "confint") <- -log(mean(exp(I - M)) + 
-#                                      c(lower = ci, upper = -ci)) - M
-#     if (keep) {
-#       attr(value, "samples") <- samples
-#       attr(value, "nlratio") <- -I
-#     }
-#     value
-#   }
-#   report <- function(par = last.par) {
-#     f(par, order = 0, type = "double")
-#     as.list(reportenv)
-#   }
-#   simulate <- function(par = last.par, complete = FALSE) {
-#     f(par, order = 0, type = "double", do_simulate = TRUE)
-#     sim <- as.list(reportenv)
-#     if (complete) {
-#       ans <- data
-#       ans[names(sim)] <- sim
-#     }
-#     else {
-#       ans <- sim
-#     }
-#     ans
-#   }
-#   list(par = par[lfixed()], fn = function(x = last.par[lfixed()], 
-#                                           ...) {
-#     if (tracepar) {
-#       cat("par:\n")
-#       print(x)
-#     }
-#     if (!validpar(x)) return(NaN)
-#     if (is.null(random)) {
-#       ans <- f(x, order = 0)
-#       if (!ADreport) {
-#         if (is.finite(ans) && ans < value.best) {
-#           last.par.best <<- x
-#           value.best <<- ans
-#         }
-#       }
-#     } else {
-#       ans <- try({
-#         if (MCcontrol$doMC) {
-#           ff(x, order = 0)
-#           MC(last.par, n = MCcontrol$n, seed = MCcontrol$seed, 
-#              order = 0)
-#         } else ff(x, order = 0)
-#       }, silent = silent)
-#       if (is.character(ans)) ans <- NaN
-#     }
-#     ans
-#   }, gr = function(x = last.par[lfixed()], ...) {
-#     if (is.null(random)) {
-#       ans <- f(x, order = 1)
-#     } else {
-#       ans <- try({
-#         if (MCcontrol$doMC) {
-#           ff(x, order = 0)
-#           MC(last.par, n = MCcontrol$n, seed = MCcontrol$seed, 
-#              order = 1)
-#         } else ff(x, order = 1)
-#       }, silent = silent)
-#       if (is.character(ans)) ans <- rep(NaN, length(x))
-#     }
-#     if (tracemgc) cat("outer mgc: ", max(abs(ans)), 
-#                       "\n")
-#     ans
-#   }, he = function(x = last.par[lfixed()], atomic = usingAtomics()) {
-#     if (is.null(random)) {
-#       if (!atomic) return(f(x, order = 2))
-#       if (is.null(ADGrad)) retape_adgrad()
-#       return(f(x, type = "ADGrad", order = 1))
-#     } else {
-#       stop("Hessian not yet implemented for models with random effects.")
-#     }
-#   }, hessian = hessian, method = method, retape = retape, env = env, 
-#   report = report, simulate = simulate, ...)
-# }
-
-
 
 
 ######################
@@ -1401,7 +106,7 @@ create_ds_data <- function(data_list){
 ######################
 
 
-plot_residuals = function(residuals, fit, Data_inp, network,
+plot_residuals = function(residuals, Data_inp, network,
                           Zlim=NULL, coords="lat_long", save_dir){
   
   if(coords == "northing_easting"){
@@ -1475,6 +180,38 @@ plot_residuals = function(residuals, fit, Data_inp, network,
 }
 
 
+## Code from Charsley et al (2023)
+TSS_func <- function(misc_table){
+  
+  TSS_list <- list()
+  
+  sn <- misc_table["1","1"] / (misc_table["1","1"] + misc_table["1","0"])
+  sp <- misc_table["0","0"] / (misc_table["0","0"] + misc_table["0","1"])
+  
+  TSS <- sn+sp-1
+  
+  TSS_list$TSS <- TSS
+  
+  N <- n <- misc_table["0","1"] + misc_table["0","0"] + misc_table["1","0"] + misc_table["1","1"]
+  P <- (misc_table["1","0"] + misc_table["1","1"])/n
+  
+  TSS_variance <- (sn*(1-sn)/N*P) + (sp*(1-sp)/N*(1-P))  
+  
+  TSS_list$TSS_SE <- sqrt(TSS_variance)
+  
+  TSS_lowerCI <- TSS - 1.96*sqrt(TSS_variance)
+  TSS_upperCI <- TSS + 1.96*sqrt(TSS_variance)
+  
+  TSS_list$CI <- c(TSS_lowerCI, TSS_upperCI)
+  
+  return(TSS_list)
+  
+}
+
+
+RMSE = function(m, o){ #RMSE function
+  sqrt(mean((m - o)^2))
+} #where m=predicted values and o=observed values
 
 
 
@@ -1504,6 +241,7 @@ plot_residuals = function(residuals, fit, Data_inp, network,
 
 plot_maps_network <-
   function(plot_set=1, 
+           Array_xct = NULL,
            make_plot=TRUE,
            fit, 
            Sdreport=NULL,
@@ -1524,7 +262,6 @@ plot_maps_network <-
            Ylim=NULL, 
            Zlim = NULL,
            legend=TRUE, 
-           #textmargin, 
            arrows=FALSE, 
            cex=0.5, 
            pch=19, 
@@ -1534,8 +271,7 @@ plot_maps_network <-
            ...){
     
     ## local functions ##
-    logsum = function(vec){ max(vec) + log(sum(exp(vec-max(vec)))) }
-    
+    #Function to extract values
     extract_value = function( Sdreport, Report, Obj=fit$tmb_list$Obj, variable_name, plot_value="estimate", n_samples, sample_fixed=TRUE ){
       if( missing(Report) ){
         Report = Obj$report()
@@ -1553,12 +289,37 @@ plot_maps_network <-
       return( Return )
       # apply( Var_r, MARGIN=c(2,4), FUN=function(mat){sum(abs(mat)==Inf)})
     }
+    
+    #Function to enjoy long titles/names wrap
+    wrapper <- function(x, ...) 
+    {
+      paste(strwrap(x, ...), collapse = "\n")
+    }
+    
+    #Function that sets the ggplot theme, edit depending on preferences
+    mytheme <- function (base_size = 14, base_family = "") 
+    {
+      theme_grey(base_size = base_size, base_family = base_family) %+replace%
+        theme(axis.title.x = element_text(margin = margin(10,0,0,0)),
+              #axis.title.x = element_text(vjust = -1.5),
+              #axis.title.y = element_text(margin = margin(0,20,0,0)),
+              #axis.title.y = element_text(vjust = -0.1),
+              legend.title = element_blank(),
+              axis.text = element_text(size = rel(0.5)),
+              axis.text.x = element_text(angle = 90),
+              axis.ticks = element_line(colour = "black"), 
+              legend.key = element_rect(colour = "grey80"),
+              panel.background = element_rect(fill = "white", colour = NA),
+              panel.border = element_rect(fill = NA, colour = "grey50"),
+              panel.grid.major = element_line(colour = "grey90", size = 0.2),
+              panel.grid.minor = element_line(colour = "grey98", size = 0.5),
+              strip.background = element_rect(fill = "grey80", colour = "grey50", size = 0.2))
+    }
     ####
     
+    #If statements to ensure that necessary variables have been specified
     if(missing(PlotName)){stop("PlotName is missing without any default")}
     if(missing(PlotTitle)){stop("PlotTitle is missing without any default")}
-    #if(missing(textmargin)){stop("textmargin is missing without any default")}
-    
     if(missing(year_labels)){year_labels = fit$year_labels}
     if(missing(years_to_plot)){years_to_plot = fit$years_to_plot}
     Report <- fit$Report
@@ -1613,14 +374,10 @@ plot_maps_network <-
     }
     
     
-    # Errors
+    #Statements to detect errors
     if( Nyears != length(year_labels) ){
       stop("Problem with `year_labels`")
     }
-    # if( Nyears != length(year_labels) & !any(plot_set %in% c(9,10))){
-    #   stop("Problem with `year_labels`")
-    # }
-    
     if( Ncategories != length(category_names) ){
       stop("Problem with `category_names`")
     }
@@ -1635,13 +392,7 @@ plot_maps_network <-
     plot_names <- c("Probability of capture", "Spatio-temporal variation", "Linear predictor for probability of capture", 
                     "Covariates", "Covariate effects for probability of capture", "Individual ovariate effects for probability of capture", 
                     "Spatial effects for probability of captures", "Spatially-varying response for habitat covariates in 1st linear predictor")
-    # if( is.null(textmargin)){
-    #   textmargin <- c("Probability of encounter", "Density, ln(kg. per square km.)", "Density, ln(kg. per square km.)", "", "", "", "", "", "", "CV of density (dimensionless)", "Covariate value", "Density, ln(kg. per square km.)", "", "", "", "")
-    # }
-    
-    
-    
-    
+
     # Loop through plots
     Return = NULL
     for(plot_num in plot_set){
@@ -1649,14 +400,13 @@ plot_maps_network <-
       inp_Zlim <- Zlim
       
       # Extract elements
-      Array_xct = NULL
       # plot_code <- c("probability_of_capture", "pos_catch", "ln_density", "", "", "epsilon_1", "epsilon_2",
       #                "linear_predictor_1", "linear_predictor_2", "density_CV", "covariates_1", "covariates_2", "total_density",
       #                "covariate_effects_1", "covariate_effects_2", "omega_1", "omega_2")[plot_num]
       
       
       # Extract matrix to plot
-      if(plot_num==1){
+      if(is.null(Array_xct) & plot_num==1){
         # Probability of capture
         if( quiet==FALSE ) message(" # plot_num 1: Plotting probability of capture maps")
         if("D_xt"%in%names(Report)) Array_xct = extract_value(Sdreport=Sdreport, Obj=Obj, Report=Report, plot_value=plot_value, sample_fixed=sample_fixed, n_samples=n_samples, variable_name="R1_xt")
@@ -1668,7 +418,7 @@ plot_maps_network <-
         message( "`plot_num=1` doesn't work well when using ObsModel[2]==1, because average area-swept doesn't generally match area of extrapolation-grid cells" )
       }
       
-      if(plot_num==2){
+      if(is.null(Array_xct) & plot_num==2){
         # Log-expected positive catch rate
         if( quiet==FALSE ) message(" # plot_num 2: Plotting positive catch rate maps")
         if("D_xt"%in%names(Report)) Array_xct = log( extract_value(Sdreport=Sdreport, Obj=Obj, Report=Report, plot_value=plot_value, sample_fixed=sample_fixed, n_samples=n_samples, variable_name="R2_xt") )
@@ -1680,7 +430,7 @@ plot_maps_network <-
         message( "`plot_num=2` doesn't work well when using ObsModel[2]==1, because average area-swept doesn't generally match area of extrapolation-grid cells" )
       }
       
-      if(plot_num==3){
+      if(is.null(Array_xct) & plot_num==3){
         # Log-predicted density (product of encounter probability and positive catch rates)
         if( quiet==FALSE ) message(" # plot_num 3: Plotting density maps (in log-space)")
         if("D_xt"%in%names(Report)) Array_xct = log( extract_value(Sdreport=Sdreport, Obj=Obj, Report=Report, plot_value=plot_value, sample_fixed=sample_fixed, n_samples=n_samples, variable_name="D_xt") )
@@ -1692,7 +442,7 @@ plot_maps_network <-
         if("dpred_ktp" %in% names(Report)) Array_xct = aperm(extract_value(Sdreport=Sdreport, Obj=Obj, Report=Report, plot_value=plot_value, sample_fixed=sample_fixed, n_samples=n_samples, variable_name="dpred_ktp")[,,cI],c(1,3,2))
       }
       
-      if(plot_num==4){
+      if(is.null(Array_xct) & plot_num==4){
         # Total density ("Dens")
         if( quiet==FALSE ) message(" # plot_num 4: Plotting total density")
         if("D_xt"%in%names(Report)) Array_xct = log(Report$D_xt)
@@ -1705,7 +455,7 @@ plot_maps_network <-
         if("dpred_ktp" %in% names(Report)) Array_xct = apply(aperm(Report$dpred_ktp,c(1,3,2)), FUN=logsum, MARGIN=c(1,3))
       }
       
-      if(plot_num==5){
+      if(is.null(Array_xct) & plot_num==5){
         # Epsilon for presence/absence
         if( quiet==FALSE ) message(" # plot_num 5: Plotting spatio-temporal effects (Epsilon) in 1st linear predictor")
         if("D_xt"%in%names(Report)) Array_xct = extract_value(Sdreport=Sdreport, Obj=Obj, Report=Report, plot_value=plot_value, sample_fixed=sample_fixed, n_samples=n_samples, variable_name="Epsilon1_st")
@@ -1715,7 +465,7 @@ plot_maps_network <-
         if(any(c("dhat_ktp","dpred_ktp")%in%names(Report)))  stop("Not implemented for SpatialVAM")
       }
       
-      if(plot_num==6){
+      if(is.null(Array_xct) & plot_num==6){
         # Epsilon for positive values ("Eps_Pos")
         if( quiet==FALSE ) message(" # plot_num 7: Plotting spatio-temporal effects (Epsilon) in 2nd linear predictor")
         if("D_xt"%in%names(Report)) Array_xct = extract_value(Sdreport=Sdreport, Obj=Obj, Report=Report, plot_value=plot_value, sample_fixed=sample_fixed, n_samples=n_samples, variable_name="Epsilon2_st")
@@ -1725,7 +475,7 @@ plot_maps_network <-
         if(any(c("dhat_ktp","dpred_ktp")%in%names(Report)))  stop("Not implemented for SpatialVAM")
       }
       
-      if(plot_num==7){
+      if(is.null(Array_xct) & plot_num==7){
         # Linear predictor for probability of capture
         if( quiet==FALSE ) message(" # plot_num 7: Plotting 1st predictor after action of link function")
         if("D_xt"%in%names(Report)) Array_xct = extract_value(Sdreport=Sdreport, Obj=Obj, Report=Report, plot_value=plot_value, sample_fixed=sample_fixed, n_samples=n_samples, variable_name="P1_xt")
@@ -1735,7 +485,7 @@ plot_maps_network <-
         if(any(c("dhat_ktp","dpred_ktp")%in%names(Report)))  stop("Not implemented for SpatialVAM")
       }
       
-      if(plot_num==8){
+      if(is.null(Array_xct) & plot_num==8){
         # Linear predictor for positive catch rates
         if( quiet==FALSE ) message(" # plot_num 8: Plotting 2nd predictor after action of link function")
         if("D_xt"%in%names(Report)) Array_xct = extract_value(Sdreport=Sdreport, Obj=Obj, Report=Report, plot_value=plot_value, sample_fixed=sample_fixed, n_samples=n_samples, variable_name="P2_xt")
@@ -1745,7 +495,7 @@ plot_maps_network <-
         if(any(c("dhat_ktp","dpred_ktp")%in%names(Report)))  stop("Not implemented for SpatialVAM")
       }
       
-      if(plot_num==9){
+      if(is.null(Array_xct) & plot_num==9){
         # Covariates that are included in the model (measured values)
         if( quiet==FALSE ) message(" # plot_num 9: Plotting covariates for 1st linear predictor")
         if(is.null(TmbData)) stop( "Must provide `TmbData` to plot covariates" )
@@ -1764,7 +514,7 @@ plot_maps_network <-
         
       }
       
-      if(plot_num==10){
+      if(is.null(Array_xct) & plot_num==10){
         # Individual covariate effects for probability of capture
         if( quiet==FALSE ) message(" # plot_num 10: Plotting individual covariate effects for probability of capture")
         if(is.null(TmbData)) stop("Must provide `TmbData` to plot covariates.")
@@ -1802,7 +552,7 @@ plot_maps_network <-
       
       
       
-      if(plot_num==11){
+      if(is.null(Array_xct) & plot_num==11){
         # Individual covariate effects for positive catch rates
         if( quiet==FALSE ) message(" # plot_num 11: Plotting individual covariate effects for positive catch rates")
         if(is.null(TmbData)) stop("Must provide `TmbData` to plot covariates.")
@@ -1837,7 +587,7 @@ plot_maps_network <-
       }
       
       
-      if(plot_num==12){
+      if(is.null(Array_xct) & plot_num==12){
         # Combined covariate effects for probability of capture
         if( quiet==FALSE ) message(" # plot_num 12: Plotting covariate effects for 1st linear predictor")
         if("D_xt"%in%names(Report)) stop()
@@ -1848,7 +598,7 @@ plot_maps_network <-
         if("dpred_ktp" %in% names(Report)) stop()
       }
       
-      if(plot_num==13){
+      if(is.null(Array_xct) & plot_num==13){
         # Covariate effects for positive catch rates
         if( quiet==FALSE ) message(" # plot_num 13: Plotting covariate effects for 2nd linear predictor")
         if("D_xt"%in%names(Report)) stop()
@@ -1859,7 +609,7 @@ plot_maps_network <-
         if("dpred_ktp" %in% names(Report)) stop()
       }
       
-      if(plot_num==14){
+      if(is.null(Array_xct) & plot_num==14){
         # Spatial effects for probability of capture
         if( quiet==FALSE ) message(" # plot_num ",plot_num,": plotting spatial effects (Omega) for 1st linear predictor")
         if("D_xt"%in%names(Report)) stop()
@@ -1870,7 +620,7 @@ plot_maps_network <-
         if("dpred_ktp" %in% names(Report)) stop()
       }
       
-      if(plot_num==15){
+      if(is.null(Array_xct) & plot_num==15){
         # Spatial effects for positive catch rates
         if( quiet==FALSE ) message(" # plot_num ",plot_num,": plotting spatial effects (Omega) for 2nd linear predictor")
         if("D_xt"%in%names(Report)) stop()
@@ -1881,7 +631,7 @@ plot_maps_network <-
         if("dpred_ktp" %in% names(Report)) stop()
       }
       
-      if(plot_num==16){
+      if(is.null(Array_xct) & plot_num==16){
         # Spatially-varying response for habitat covariates in 1st linear predictor
         if( quiet==FALSE ) message(" # plot_num ",plot_num,": plotting spatially-varying response to habitat covariates (Xi) for 1st linear predictor")
         if("D_xt"%in%names(Report)) stop()
@@ -1892,7 +642,7 @@ plot_maps_network <-
         if("dpred_ktp" %in% names(Report)) stop()
       }
       
-      if(plot_num==17){
+      if(is.null(Array_xct) & plot_num==17){
         # Spatially-varying response for density covariates in 1st linear predictor
         if( quiet==FALSE ) message(" # plot_num ",plot_num,": plotting spatially-varying response to density covariates (Xi) for 2nd linear predictor")
         if("D_xt"%in%names(Report)) stop()
@@ -1915,186 +665,6 @@ plot_maps_network <-
       
       # require(ggplot2)
       if(all(is.null(spatial_list))) stop("add spatial_list (output from FishStatsUtils::make_spatial_info) to use ggplot2 plots.")
-      
-      
-      
-      # if(make_plot==TRUE){
-      #   
-      #   # Plot for each category
-      #   if( tolower(Panel)=="category" ){
-      #     if(length(dim(Array_xct))==2) Nplot = 1
-      #     if(length(dim(Array_xct))==3) Nplot = dim(Array_xct)[2]
-      #     
-      #     Return = Array_xct
-      #     
-      #     for( cI in 1:Nplot){
-      #       
-      #       # if(length(dim(Array_xct))==2) Return = Mat_xt = Array_xct
-      #       # if(length(dim(Array_xct))==3) Return = Mat_xt = array(as.vector(Array_xct[,cI,]),dim=dim(Array_xct)[c(1,3)])
-      #       if(length(dim(Array_xct))==2) Mat_xt = Array_xct
-      #       if(length(dim(Array_xct))==3) Mat_xt = array(as.vector(Array_xct[,cI,]),dim=dim(Array_xct)[c(1,3)])
-      #       
-      #       
-      #       ## matrix is number of nodes by number of years
-      #       if(is.null(dim(Mat_xt)))  n_t = 1 else n_t <- dim(Mat_xt)[2]
-      #       if(n_t != length(year_labels)) stop("number of years in density array does not match Data_Geostat years")
-      #       
-      #       if(n_t > 1) {
-      #         xct <- lapply(1:n_t, function(x){
-      #           out <- data.frame('value'=Mat_xt[,x], 'year'=year_labels[x], spatial_list$loc_g, 'category'=category_names[cI])
-      #           return(out)
-      #         })
-      #         xct <- do.call(rbind, xct)
-      #       } else xct <- data.frame('value'=Mat_xt, 'year'=year_labels, spatial_list$loc_g, "category"=category_names[1])
-      #       
-      #       if(all(is.null(Xlim))) Xlim = c(min(xct$E_km),max(xct$E_km))
-      #       if(all(is.null(Ylim))) Ylim = c(min(xct$N_km),max(xct$N_km))
-      #       p <- ggplot(xct)
-      #       if(arrows == TRUE){
-      #         Network_sz_EN <- data.frame('parent_s'=fit$data_list$parent_s, 'child_s'=fit$data_list$child_s, fit$spatial_list$loc_g)
-      #         l2 <- lapply(1:nrow(Network_sz_EN), function(x){
-      #           parent <- Network_sz_EN$parent_s[x]
-      #           find <- Network_sz_EN %>% filter(child_s == parent)
-      #           if(nrow(find)>0) out <- cbind.data.frame(Network_sz_EN[x,], 'E2'=find$E_km, 'N2'=find$N_km)
-      #           if(nrow(find)==0) out <- cbind.data.frame(Network_sz_EN[x,], 'E2'=NA, 'N2'=NA)
-      #           # if(nrow(find)>0) out <- cbind.data.frame(Network_sz_EN[x,], 'long2'=find$long, 'lat2'=find$lat)
-      #           # if(nrow(find)==0) out <- cbind.data.frame(Network_sz_EN[x,], 'long2'=NA, 'lat2'=NA)
-      #           return(out)
-      #         })
-      #         l2 <- do.call(rbind, l2)
-      #         p <- p + geom_segment(data=l2, aes(x = E_km,y = N_km, xend = E2, yend = N2), arrow=arrow(length=unit(0.2,"cm")), 
-      #                               col="gray92")
-      #       }
-      #       if(is.null(Zlim)) inp_Zlim = quantile(xct$value, prob = c(0,1), na.rm=TRUE)
-      #       p <- p +
-      #         geom_point(aes(x = E_km, y = N_km, color = value), cex = cex, pch=pch) +
-      #         scale_color_distiller(palette = "Spectral", limits = inp_Zlim) +
-      #         coord_cartesian(xlim = Xlim, ylim = Ylim) +
-      #         scale_x_continuous(breaks=quantile(xct$E_km, prob=c(0.1,0.5,0.9)), labels=round(quantile(xct$E_km, prob=c(0.1,0.5,0.9)),0)) +
-      #         # guides(color=guide_legend(title=plot_codes[plot_num])) +
-      #         facet_wrap(~year) + 
-      #         mytheme() +
-      #         xlab("Eastings") + ylab("Northings")
-      #       
-      #       #if(is.null(PlotName)){PlotName=plot_names[plot_num]}
-      #       
-      #       if(Nplot!=1) p <- p + ggtitle(wrapper(paste(PlotTitle, " - ", category_names[cI]), width = 50))
-      #       if(Nplot==1) p <- p + ggtitle(wrapper(PlotTitle, width = 50))
-      #       
-      #       if(!is.null(DirName)){
-      #         
-      #         if(Nplot!=1) ggsave(file.path(DirName, paste0(PlotName, "_", cI, "_byCat.png")), p, width=8,height=8)
-      #         if(Nplot==1) ggsave(file.path(DirName, paste0(PlotName, ".png")), p, width=8,height=8)
-      #       }      
-      #       if(is.null(DirName)){
-      #         dev.new()
-      #         print(p)
-      #       }    
-      #     }
-      #   }
-      #   
-      #   # Plot for each year
-      #   if( tolower(Panel)=="year" ){
-      #     Nplot = length(years_to_plot)
-      #     
-      #     Return = Array_xct
-      #     
-      #     for( tI in 1:Nplot){
-      #       if(length(dim(Array_xct))==2) Mat_xc = Array_xct[,years_to_plot[tI],drop=TRUE]
-      #       if(length(dim(Array_xct))==3) Mat_xc = Array_xct[,,years_to_plot[tI],drop=TRUE]
-      #       if(is.null(dim(Mat_xc)) & is.vector(Mat_xc)){
-      #         Ncategories = 1
-      #       } else { Ncategories = dim(Mat_xc)[2] }
-      #       
-      #       # Return = Mat_xc = array( as.vector(Mat_xc), dim=c(dim(Array_xct)[1],Ncategories)) # Reformat to make sure it has same format for everything
-      #       Mat_xc = array( as.vector(Mat_xc), dim=c(dim(Array_xct)[1],Ncategories))
-      #       
-      #       
-      #       ## matrix is number of nodes by number of years
-      #       n_c <- dim(Mat_xc)[2]
-      #       if(n_c > 1) {
-      #         xct <- lapply(1:n_c, function(x){
-      #           out <- data.frame('value'=Mat_xc[,x], 'year'=year_labels[years_to_plot[tI]], spatial_list$loc_g, 'category'=category_names[x])
-      #           return(out)
-      #         })
-      #         xct <- do.call(rbind, xct)
-      #       } else xct <- data.frame('value'=Mat_xc, 'year'=year_labels[years_to_plot[tI]], spatial_list$loc_g, "category"='')
-      #       if(all(is.null(Xlim))) Xlim = c(min(xct$E_km),max(xct$E_km))
-      #       if(all(is.null(Ylim))) Ylim = c(min(xct$N_km),max(xct$N_km))
-      #       p <- ggplot(xct)
-      #       if(arrows == TRUE){
-      #         Network_sz_EN <- data.frame('parent_s'=fit$data_list$parent_s, 'child_s'=fit$data_list$child_s, fit$spatial_list$loc_g)
-      #         l2 <- lapply(1:nrow(Network_sz_EN), function(x){
-      #           parent <- Network_sz_EN$parent_s[x]
-      #           find <- Network_sz_EN %>% filter(child_s == parent)
-      #           if(nrow(find)>0) out <- cbind.data.frame(Network_sz_EN[x,], 'E2'=find$E_km, 'N2'=find$N_km)
-      #           if(nrow(find)==0) out <- cbind.data.frame(Network_sz_EN[x,], 'E2'=NA, 'N2'=NA)
-      #           # if(nrow(find)>0) out <- cbind.data.frame(Network_sz_EN[x,], 'long2'=find$long, 'lat2'=find$lat)
-      #           # if(nrow(find)==0) out <- cbind.data.frame(Network_sz_EN[x,], 'long2'=NA, 'lat2'=NA)
-      #           return(out)
-      #         })
-      #         l2 <- do.call(rbind, l2)
-      #         p <- p + geom_segment(data=l2, aes(x = E_km,y = N_km, xend = E2, yend = N2), #arrow=arrow(length=unit(0.2,"cm")), 
-      #                               col="gray92")
-      #       }
-      #       if(is.null(Zlim)) inp_Zlim = quantile(xct$value, prob = c(0,1), na.rm=TRUE)
-      #       
-      #       
-      #       if(n_c > 1){
-      #         
-      #         p <- p +
-      #           geom_point(aes(x = E_km, y = N_km, color = value), cex=cex, pch=pch) +
-      #           scale_color_distiller(palette = "Spectral", limits = inp_Zlim) +
-      #           coord_cartesian(xlim = Xlim, ylim = Ylim) +
-      #           scale_x_continuous(breaks=quantile(xct$E_km, prob=c(0.1,0.5,0.9)), labels=round(quantile(xct$E_km, prob=c(0.1,0.5,0.9)),0)) +
-      #           # guides(color=guide_legend(title=plot_codes[plot_num])) +
-      #           facet_wrap(~category) + 
-      #           mytheme() +
-      #           xlab("Eastings") + ylab("Northings")
-      #         
-      #         width = 10; height = 5
-      #         
-      #       } 
-      #       
-      #       if(n_c == 1){
-      #         
-      #         p <- p +
-      #           geom_point(aes(x = E_km, y = N_km, color = value), cex=cex, pch=pch) +
-      #           scale_color_distiller(palette = "Spectral", limits = inp_Zlim) +
-      #           coord_cartesian(xlim = Xlim, ylim = Ylim) +
-      #           scale_x_continuous(breaks=quantile(xct$E_km, prob=c(0.1,0.5,0.9)), labels=round(quantile(xct$E_km, prob=c(0.1,0.5,0.9)),0)) +
-      #           # guides(color=guide_legend(title=plot_codes[plot_num])) +
-      #           #facet_wrap(~category) + 
-      #           mytheme() +
-      #           xlab("Eastings") + ylab("Northings")
-      #         
-      #         width = 6; height = 5
-      #         
-      #       }
-      #       
-      #       #if(is.null(PlotName)){PlotName=plot_names[plot_num]}
-      #       
-      #       if(Nplot!=1) p <- p + ggtitle(wrapper(paste(PlotTitle," - ", year_labels[years_to_plot[tI]]), width = 50))
-      #       if(Nplot==1) p <- p + ggtitle(wrapper(PlotTitle, width = 50))
-      #       
-      #       if(!is.null(DirName)){
-      #         
-      #         if(Nplot!=1) ggsave(file.path(DirName, paste0(PlotName, "_", year_labels[years_to_plot[tI]], ".png")), p, width=width, height=height)
-      #         if(Nplot==1) ggsave(file.path(DirName, paste0(PlotName, ".png")), p, width = width, height = height)
-      #       }       
-      #       if(is.null(DirName)){
-      #         dev.new()
-      #         print(p) 
-      #       }  
-      #     }
-      #   }
-      #   
-      # }else{
-      #   if(length(plot_set) > 1){print("Returned array will be for the last plot_set when plot_set > 1")}
-      #   
-      #   Return = Array_xct
-      #   
-      # }
       
       
       
@@ -2297,369 +867,386 @@ plot_maps_network <-
 
 
 
-wrapper <- function(x, ...) 
-{
-  paste(strwrap(x, ...), collapse = "\n")
-}
+plot_range_index_SN <-
+  function( Sdreport,
+            Report,
+            TmbData,
+            year_labels = NULL,
+            years_to_plot = NULL,
+            strata_names = NULL,
+            PlotDir = paste0(getwd(),"/"),
+            FileName_COG = paste0(PlotDir,"/center_of_gravity.png"),
+            FileName_Area = paste0(PlotDir,"/Area.png"),
+            FileName_EffArea = paste0(PlotDir,"/Effective_Area.png"),
+            Znames = rep("",ncol(TmbData$Z_xm)),
+            use_biascorr = TRUE,
+            category_names = NULL,
+            interval_width = 1,
+            total_river_length,
+            ...){
 
+    # Informative errors
+    if(is.null(Sdreport)) stop("Sdreport is NULL; please provide Sdreport")
 
-mytheme <- function (base_size = 14, base_family = "") 
-{
-  theme_grey(base_size = base_size, base_family = base_family) %+replace%
-    theme(axis.title.x = element_text(margin = margin(10,0,0,0)),
-          #axis.title.x = element_text(vjust = -1.5),
-          #axis.title.y = element_text(margin = margin(0,20,0,0)),
-          #axis.title.y = element_text(vjust = -0.1),
-          legend.title = element_blank(),
-          axis.text = element_text(size = rel(0.5)),
-          axis.text.x = element_text(angle = 90),
-          axis.ticks = element_line(colour = "black"), 
-          legend.key = element_rect(colour = "grey80"),
-          panel.background = element_rect(fill = "white", colour = NA),
-          panel.border = element_rect(fill = NA, colour = "grey50"),
-          panel.grid.major = element_line(colour = "grey90", size = 0.2),
-          panel.grid.minor = element_line(colour = "grey98", size = 0.5),
-          strip.background = element_rect(fill = "grey80", colour = "grey50", size = 0.2))
-}
+    # Which parameters
+    if( "ln_Index_tl" %in% rownames(TMB::summary.sdreport(Sdreport)) ){
+      # SpatialDeltaGLMM
+      CogName = "mean_Z_tm"
+      EffectiveName = "effective_area_tl"
+      TmbData[['n_c']] = 1
+    }
+    if( "ln_Index_ctl" %in% rownames(TMB::summary.sdreport(Sdreport)) ){
+      # VAST Version < 2.0.0
+      CogName = "mean_Z_ctm"
+      EffectiveName = "effective_area_ctl"
+    }
+    if( "ln_Index_cyl" %in% rownames(TMB::summary.sdreport(Sdreport)) ){
+      # VAST Version >= 2.0.0
+      CogName = "mean_Z_cym"
+      EffectiveName = "effective_area_cyl"
+      TmbData[["n_t"]] = nrow(TmbData[["t_yz"]])
+    }
 
+    # Default inputs
+    if( is.null(year_labels)) year_labels = 1:TmbData$n_t
+    if( is.null(years_to_plot) ) years_to_plot = 1:TmbData$n_t
+    if( is.null(strata_names) ) strata_names = 1:TmbData$n_l
+    if( is.null(category_names) ) category_names = 1:TmbData$n_c
+    Return = list( "year_labels"=year_labels )
 
+    # Plot distribution shift and kernal-area approximation to area occupied if necessary outputs are available
+    if( !any(c("mean_Z_tm","mean_Z_ctm","mean_Z_cym") %in% names(Report)) ){
+      message( "To plot range-shifts and kernal-approximation to area occupied, please re-run with Options['Calculate_Range']=1" )
+    }else{
+      message( "Plotting center-of-gravity..." )
 
+      # Extract index  (using bias-correctino if available and requested)
+      SD = TMB::summary.sdreport(Sdreport)
+      SD_mean_Z_ctm = array( NA, dim=c(unlist(TmbData[c('n_c','n_t','n_m')]),2), dimnames=list(NULL,NULL,NULL,c('Estimate','Std. Error')) )
+      if( use_biascorr==TRUE && "unbiased"%in%names(Sdreport) ){
+        SD_mean_Z_ctm[] = SD[which(rownames(SD)==CogName),c('Est. (bias.correct)','Std. Error')]
+      }
+      if( !any(is.na(SD_mean_Z_ctm)) ){
+        message("Using bias-corrected estimates for center of gravity...")
+      }else{
+        message("Not using bias-corrected estimates for center of gravity...")
+        SD_mean_Z_ctm[] = SD[which(rownames(SD)==CogName),c('Estimate','Std. Error')]
+      }
 
-# plot_range_index_riverlength <-
-#   function( Sdreport,
-#             Report,
-#             TmbData,
-#             year_labels = NULL,
-#             years_to_plot = NULL,
-#             strata_names = NULL,
-#             PlotDir = paste0(getwd(),"/"),
-#             FileName_COG = paste0(PlotDir,"/center_of_gravity.png"),
-#             FileName_Area = paste0(PlotDir,"/Area.png"),
-#             FileName_EffArea = paste0(PlotDir,"/Effective_Area.png"),
-#             Znames = rep("",ncol(TmbData$Z_xm)),
-#             use_biascorr = TRUE,
-#             category_names = NULL,
-#             interval_width = 1,
-#             total_river_length,
-#             ...){
-#     
-#     # Informative errors
-#     if(is.null(Sdreport)) stop("Sdreport is NULL; please provide Sdreport")
-#     
-#     # Which parameters
-#     if( "ln_Index_tl" %in% rownames(TMB::summary.sdreport(Sdreport)) ){
-#       # SpatialDeltaGLMM
-#       CogName = "mean_Z_tm"
-#       EffectiveName = "effective_area_tl"
-#       TmbData[['n_c']] = 1
-#     }
-#     if( "ln_Index_ctl" %in% rownames(TMB::summary.sdreport(Sdreport)) ){
-#       # VAST Version < 2.0.0
-#       CogName = "mean_Z_ctm"
-#       EffectiveName = "effective_area_ctl"
-#     }
-#     if( "ln_Index_cyl" %in% rownames(TMB::summary.sdreport(Sdreport)) ){
-#       # VAST Version >= 2.0.0
-#       CogName = "mean_Z_cym"
-#       EffectiveName = "effective_area_cyl"
-#       TmbData[["n_t"]] = nrow(TmbData[["t_yz"]])
-#     }
-#     
-#     # Default inputs
-#     if( is.null(year_labels)) year_labels = 1:TmbData$n_t
-#     if( is.null(years_to_plot) ) years_to_plot = 1:TmbData$n_t
-#     if( is.null(strata_names) ) strata_names = 1:TmbData$n_l
-#     if( is.null(category_names) ) category_names = 1:TmbData$n_c
-#     Return = list( "year_labels"=year_labels )
-#     
-#     # Plot distribution shift and kernal-area approximation to area occupied if necessary outputs are available
-#     if( !any(c("mean_Z_tm","mean_Z_ctm","mean_Z_cym") %in% names(Report)) ){
-#       message( "To plot range-shifts and kernal-approximation to area occupied, please re-run with Options['Calculate_Range']=1" )
-#     }else{
-#       message( "Plotting center-of-gravity..." )
-#       
-#       # Extract index  (using bias-correctino if available and requested)
-#       SD = TMB::summary.sdreport(Sdreport)
-#       SD_mean_Z_ctm = array( NA, dim=c(unlist(TmbData[c('n_c','n_t','n_m')]),2), dimnames=list(NULL,NULL,NULL,c('Estimate','Std. Error')) )
-#       if( use_biascorr==TRUE && "unbiased"%in%names(Sdreport) ){
-#         SD_mean_Z_ctm[] = SD[which(rownames(SD)==CogName),c('Est. (bias.correct)','Std. Error')]
-#       }
-#       if( !any(is.na(SD_mean_Z_ctm)) ){
-#         message("Using bias-corrected estimates for center of gravity...")
-#       }else{
-#         message("Not using bias-corrected estimates for center of gravity...")
-#         SD_mean_Z_ctm[] = SD[which(rownames(SD)==CogName),c('Estimate','Std. Error')]
-#       }
-#       
-#       # Plot center of gravity
-#       # Can't use `FishStatsUtils::plot_index` because of 2-column format
-#       png( file=FileName_COG, width=6.5, height=TmbData$n_c*2, res=200, units="in")
-#       par( mar=c(2,2,1,0), mgp=c(1.75,0.25,0), tck=-0.02, oma=c(1,1,0,1.5), mfrow=c(TmbData$n_c,dim(SD_mean_Z_ctm)[[3]]), ... )  #
-#       for( cI in 1:TmbData$n_c ){
-#         for( mI in 1:dim(SD_mean_Z_ctm)[[3]]){
-#           Ybounds = (SD_mean_Z_ctm[cI,years_to_plot,mI,'Estimate']%o%rep(interval_width,2) + SD_mean_Z_ctm[cI,years_to_plot,mI,'Std. Error']%o%c(-interval_width,interval_width))
-#           Ylim = range(Ybounds,na.rm=TRUE)
-#           plot_lines(x=year_labels[years_to_plot], 
-#                      y=SD_mean_Z_ctm[cI,years_to_plot,mI,'Estimate'], 
-#                      ybounds=Ybounds, 
-#                      col_bounds=rgb(1,0,0,0.2), 
-#                      fn=plot,
-#                      type="l", 
-#                      lwd=2, 
-#                      col="red", 
-#                      bounds_type="shading", 
-#                      ylim=Ylim, xlab="", ylab="", main="")
-#           if( cI==1 ) mtext(side=3, text=Znames[mI], outer=FALSE )
-#           if( mI==dim(SD_mean_Z_ctm)[[3]] & TmbData$n_c>1 ) mtext(side=4, text=category_names[cI], outer=FALSE, line=0.5)
-#         }}
-#       mtext( side=1:2, text=c("Year","Location"), outer=TRUE, line=c(0,0) )
-#       dev.off()
-#       
-#       # Write to file
-#       COG_Table = NULL
-#       for( cI in 1:TmbData$n_c ){
-#         for( mI in 1:dim(SD_mean_Z_ctm)[[3]]){
-#           Tmp = cbind("m"=mI, "Year"=year_labels, "COG_hat"=SD_mean_Z_ctm[cI,,mI,'Estimate'], "SE"=SD_mean_Z_ctm[cI,,mI,'Std. Error'])
-#           if( TmbData$n_c>1 ) Tmp = cbind( "Category"=category_names[cI], Tmp)
-#           COG_Table = rbind(COG_Table, Tmp)
-#         }}
-#       
-#       # Plot area
-#       #KernelArea_Table = cbind("Year"=year_labels, "KernelArea"=SD_log_area_Z_tmm[,2,1,1], "SE"=SD_log_area_Z_tmm[,2,1,2])
-#       #png( file=FileName_Area, width=4, height=4, res=200, units="in")
-#       #  par( mfrow=c(1,1), mar=c(3,3,2,0), mgp=c(1.75,0.25,0), tck=-0.02, oma=c(0,0,0,0))
-#       #  plot_lines( x=year_labels, y=SD_log_area_Z_tmm[,2,1,1], ybounds=SD_log_area_Z_tmm[,2,1,1]%o%rep(1,2)+SD_log_area_Z_tmm[,2,1,2]%o%c(-1,1), fn=plot, bounds_type="shading", col_bounds=rgb(1,0,0,0.2), col="red", lwd=2, xlab="Year", ylab="ln(km^2)", type="l", main="Kernel approximation to area occupied")
-#       #dev.off()
-#       
-#       # Return stuff
-#       Return = c(Return, list("SD_mean_Z_ctm"=SD_mean_Z_ctm, "COG_Table"=COG_Table))
-#     }
-#     
-#     #
-#     # Only run if necessary outputs are available
-#     if( !any(c("effective_area_tl","effective_area_ctl","effective_area_cyl") %in% names(Report)) ){
-#       message( "To plot effective area occupied, please re-run with Options['Calculate_effective_area']=1" )
-#     }else{
-#       message( "Plotting effective area occupied..." )
-#       
-#       # Extract estimates
-#       SD = TMB::summary.sdreport(Sdreport)
-#       SD_effective_area_ctl = SD_log_effective_area_ctl = array( NA, dim=c(unlist(TmbData[c('n_c','n_t','n_l')]),2), dimnames=list(NULL,NULL,NULL,c('Estimate','Std. Error')) )
-#       # Effective area
-#       if( use_biascorr==TRUE && "unbiased"%in%names(Sdreport) ){
-#         SD_effective_area_ctl[] = SD[which(rownames(SD)==EffectiveName),c('Est. (bias.correct)','Std. Error')]
-#       }
-#       if( !any(is.na(SD_effective_area_ctl)) ){
-#         message("Using bias-corrected estimates for effective area occupied (natural scale)...")
-#       }else{
-#         message("Not using bias-corrected estimates for effective area occupied (natural scale)...")
-#         SD_effective_area_ctl[] = SD[which(rownames(SD)==EffectiveName),c('Estimate','Std. Error')]
-#       }
-#       # Log-Effective area
-#       if( use_biascorr==TRUE && "unbiased"%in%names(Sdreport) ){
-#         SD_log_effective_area_ctl[] = SD[which(rownames(SD)==paste0("log_",EffectiveName)),c('Est. (bias.correct)','Std. Error')]
-#       }
-#       if( !any(is.na(SD_log_effective_area_ctl)) ){
-#         message("Using bias-corrected estimates for effective area occupied (log scale)...")
-#       }else{
-#         message("Not using bias-corrected estimates for effective area occupied (log scale)...")
-#         SD_log_effective_area_ctl[] = SD[which(rownames(SD)==paste0("log_",EffectiveName)),c('Estimate','Std. Error')]
-#       }
-#       
-#       # Plot area
-#       # plot_index( Index_ctl = exp(abind::adrop(SD_log_effective_area_ctl[,,,'Estimate',drop=FALSE], drop = 4)),
-#       #             sd_Index_ctl = abind::adrop(SD_log_effective_area_ctl[,,,'Std. Error',drop=FALSE], drop = 4),
-#       #             year_labels = year_labels,
-#       #             years_to_plot = years_to_plot,
-#       #             strata_names = strata_names,
-#       #             category_names = category_names,
-#       #             DirName = "",
-#       #             PlotName = FileName_EffArea,
-#       #             scale = "log",
-#       #             interval_width = interval_width,
-#       #             xlab = "Year",
-#       #             ylab = "Effective area occupied [km^2]",
-#       #             Yrange = c(NA,NA),
-#       #             width = ceiling(TmbData$n_c/ceiling(sqrt(TmbData$n_c)))*4,
-#       #             #plot_args = list(log="y"),
-#       #             height = ceiling(sqrt(TmbData$n_c))*4 )
-#       
-#       plot_index_SN( #Index_ctl = (abind::adrop(SD_effective_area_ctl[,,,'Estimate',drop=FALSE], drop = 4))/total_river_length*100,
-#         #sd_Index_ctl = (abind::adrop(SD_effective_area_ctl[,,,'Std. Error',drop=FALSE], drop = 4)/total_river_length)*100,
-#         Index_ctl=array((SD_effective_area_ctl[,,,'Estimate']/total_river_length)*100,dim(SD_effective_area_ctl)[1:3]),
-#         sd_Index_ctl=array((SD_effective_area_ctl[,,,'Std. Error']/total_river_length)*100,dim(SD_effective_area_ctl)[1:3]),
-#         year_labels = as.character(year_labels),
-#         years_to_plot = years_to_plot,
-#         strata_names = strata_names,
-#         category_names = category_names,
-#         DirName = "",
-#         PlotName = FileName_EffArea,
-#         #scale = "log",
-#         scale = "uniform",
-#         interval_width = interval_width,
-#         xlab = "Year",
-#         ylab = "% River length occupied",
-#         Yrange = c(NA,NA),
-#         width = ceiling(TmbData$n_c/ceiling(sqrt(TmbData$n_c)))*4,
-#         #plot_args = list(log="y"),
-#         height = ceiling(sqrt(TmbData$n_c))*4 )
-#       
-#       
-#       
-#       #png( file=FileName_EffArea, width=ceiling(TmbData$n_c/ceiling(sqrt(TmbData$n_c)))*2.5, height=ceiling(sqrt(TmbData$n_c))*2.5, res=200, units="in")
-#       #  par( mfrow=c(1,1), mar=c(2,2,1,0), mgp=c(1.75,0.25,0), tck=-0.02, oma=c(1,1,1,0), mfrow=c(ceiling(sqrt(TmbData$n_c)),ceiling(TmbData$n_c/ceiling(sqrt(TmbData$n_c)))))
-#       #  for( cI in 1:TmbData$n_c ){
-#       #    Ybounds = SD_log_effective_area_ctl[cI,,1,1]%o%rep(interval_width,2) + SD_log_effective_area_ctl[cI,,1,2]%o%c(-interval_width,interval_width)
-#       #    plot_lines( x=year_labels, y=SD_log_effective_area_ctl[cI,,1,1], ybounds=Ybounds, ylim=range(Ybounds), fn=plot, bounds_type="shading", col_bounds=rgb(1,0,0,0.2), col="red", lwd=2, xlab="", ylab="", type="l", main=category_names[cI])
-#       #  }
-#       #  mtext( side=1:3, text=c("Year","ln(km^2)","Effective area occupied"), outer=TRUE, line=c(0,0,0) )
-#       #dev.off()
-#       
-#       # Write to file
-#       EffectiveArea_Table = NULL
-#       for( cI in 1:TmbData$n_c ){
-#         Tmp = cbind("Year"=year_labels, "EffectiveArea"=SD_log_effective_area_ctl[cI,,1,1], "SE"=SD_log_effective_area_ctl[cI,,1,2])
-#         if( TmbData$n_c>1 ) Tmp = cbind( "Category"=category_names[cI], Tmp)
-#         EffectiveArea_Table = rbind(EffectiveArea_Table, Tmp)
-#       }
-#       
-#       # Return stuff
-#       Return = c(Return, list("SD_effective_area_ctl"=SD_effective_area_ctl, "SD_log_effective_area_ctl"=SD_log_effective_area_ctl, "EffectiveArea_Table"=EffectiveArea_Table))
-#     }
-#     
-#     # Return list of stuff
-#     return( invisible(Return) )
-#   }
+      # Plot center of gravity
+      # Can't use `FishStatsUtils::plot_index` because of 2-column format
+      png( file=FileName_COG, width=6.5, height=TmbData$n_c*2, res=200, units="in")
+      par( mar=c(2,2,1,0), mgp=c(1.75,0.25,0), tck=-0.02, oma=c(1,1,0,1.5), mfrow=c(TmbData$n_c,dim(SD_mean_Z_ctm)[[3]]), ... )  #
+      for( cI in 1:TmbData$n_c ){
+        for( mI in 1:dim(SD_mean_Z_ctm)[[3]]){
+          #Ybounds = (SD_mean_Z_ctm[cI,years_to_plot,mI,'Estimate']%o%rep(interval_width,2) + SD_mean_Z_ctm[cI,years_to_plot,mI,'Std. Error']%o%c(-interval_width,interval_width))
+          #Ylim = range(Ybounds,na.rm=TRUE)
+          #plot_lines( x = year_labels[years_to_plot],
+          #            y = SD_mean_Z_ctm[cI,years_to_plot,mI,'Estimate'],
+          #            ybounds = Ybounds,
+          #            col_bounds = rgb(1,0,0,0.2),
+          #            fn = plot,
+          #            type = "l",
+          #            lwd = 2,
+          #            col = "red",
+          #            bounds_type = "shading",
+          #            ylim = Ylim,
+          #            xlab = "",
+          #            ylab = "",
+          #            main = "" )
+          plot_index( Index_ctl = matrix(SD_mean_Z_ctm[cI,,mI,'Estimate'],nrow=1),
+                      sd_Index_ctl = matrix(SD_mean_Z_ctm[cI,,mI,'Std. Error'],nrow=1),
+                      year_labels = year_labels,
+                      years_to_plot = years_to_plot,
+                      col_bounds = rgb(1,0,0,0.2),
+                      type = "l",
+                      lwd = 2,
+                      col = "red",
+                      bounds_type = "shading",
+                      PlotName = NA,
+                      Yrange = c(NA,NA),
+                      xlab = "",
+                      ylab = "",
+                      add = TRUE )
+          if( cI==1 ) mtext(side=3, text=Znames[mI], outer=FALSE )
+          if( mI==dim(SD_mean_Z_ctm)[[3]] & TmbData$n_c>1 ) mtext(side=4, text=category_names[cI], outer=FALSE, line=0.5)
+        }}
+      mtext( side=1:2, text=c("Year","Location"), outer=TRUE, line=c(0,0) )
+      dev.off()
+
+      # Write to file
+      COG_Table = NULL
+      for( cI in 1:TmbData$n_c ){
+        for( mI in 1:dim(SD_mean_Z_ctm)[[3]]){
+          Tmp = cbind("m"=mI, "Year"=year_labels, "COG_hat"=SD_mean_Z_ctm[cI,,mI,'Estimate'], "SE"=SD_mean_Z_ctm[cI,,mI,'Std. Error'])
+          if( TmbData$n_c>1 ) Tmp = cbind( "Category"=category_names[cI], Tmp)
+          COG_Table = rbind(COG_Table, Tmp)
+        }}
+
+      # Plot area
+      #KernelArea_Table = cbind("Year"=year_labels, "KernelArea"=SD_log_area_Z_tmm[,2,1,1], "SE"=SD_log_area_Z_tmm[,2,1,2])
+      #png( file=FileName_Area, width=4, height=4, res=200, units="in")
+      #  par( mfrow=c(1,1), mar=c(3,3,2,0), mgp=c(1.75,0.25,0), tck=-0.02, oma=c(0,0,0,0))
+      #  plot_lines( x=year_labels, y=SD_log_area_Z_tmm[,2,1,1], ybounds=SD_log_area_Z_tmm[,2,1,1]%o%rep(1,2)+SD_log_area_Z_tmm[,2,1,2]%o%c(-1,1), fn=plot, bounds_type="shading", col_bounds=rgb(1,0,0,0.2), col="red", lwd=2, xlab="Year", ylab="ln(km^2)", type="l", main="Kernel approximation to area occupied")
+      #dev.off()
+
+      # Return stuff
+      Return = c(Return, list("SD_mean_Z_ctm"=SD_mean_Z_ctm, "COG_Table"=COG_Table))
+    }
+
+    #
+    # Only run if necessary outputs are available
+    if( !any(c("effective_area_tl","effective_area_ctl","effective_area_cyl") %in% names(Report)) ){
+      message( "To plot effective area occupied, please re-run with Options['Calculate_effective_area']=1" )
+    }else{
+      message( "Plotting effective area occupied..." )
+
+      # Extract estimates
+      SD = TMB::summary.sdreport(Sdreport)
+      SD_effective_area_ctl = SD_log_effective_area_ctl = array( NA, dim=c(unlist(TmbData[c('n_c','n_t','n_l')]),2), dimnames=list(NULL,NULL,NULL,c('Estimate','Std. Error')) )
+      # Effective area
+      if( use_biascorr==TRUE && "unbiased"%in%names(Sdreport) ){
+        SD_effective_area_ctl[] = SD[which(rownames(SD)==EffectiveName),c('Est. (bias.correct)','Std. Error')]
+      }
+      if( !any(is.na(SD_effective_area_ctl)) ){
+        message("Using bias-corrected estimates for effective area occupied (natural scale)...")
+      }else{
+        message("Not using bias-corrected estimates for effective area occupied (natural scale)...")
+        SD_effective_area_ctl[] = SD[which(rownames(SD)==EffectiveName),c('Estimate','Std. Error')]
+      }
+      # Log-Effective area
+      if( use_biascorr==TRUE && "unbiased"%in%names(Sdreport) ){
+        SD_log_effective_area_ctl[] = SD[which(rownames(SD)==paste0("log_",EffectiveName)),c('Est. (bias.correct)','Std. Error')]
+      }
+      if( !any(is.na(SD_log_effective_area_ctl)) ){
+        message("Using bias-corrected estimates for effective area occupied (log scale)...")
+      }else{
+        message("Not using bias-corrected estimates for effective area occupied (log scale)...")
+        SD_log_effective_area_ctl[] = SD[which(rownames(SD)==paste0("log_",EffectiveName)),c('Estimate','Std. Error')]
+      }
+
+      # Plot area
+      # plot_index( Index_ctl = exp(abind::adrop(SD_log_effective_area_ctl[,,,'Estimate',drop=FALSE], drop = 4)),
+      #             sd_Index_ctl = abind::adrop(SD_log_effective_area_ctl[,,,'Std. Error',drop=FALSE], drop = 4),
+      #             year_labels = year_labels,
+      #             years_to_plot = years_to_plot,
+      #             strata_names = strata_names,
+      #             category_names = category_names,
+      #             DirName = "",
+      #             PlotName = FileName_EffArea,
+      #             scale = "log",
+      #             interval_width = interval_width,
+      #             xlab = "Year",
+      #             ylab = "Effective area occupied [km^2]",
+      #             Yrange = c(NA,NA),
+      #             width = ceiling(TmbData$n_c/ceiling(sqrt(TmbData$n_c)))*4,
+      #             #plot_args = list(log="y"),
+      #             height = ceiling(sqrt(TmbData$n_c))*4 )
+
+      plot_index_SN( #Index_ctl = (abind::adrop(SD_effective_area_ctl[,,,'Estimate',drop=FALSE], drop = 4))/total_river_length*100,
+        #sd_Index_ctl = (abind::adrop(SD_effective_area_ctl[,,,'Std. Error',drop=FALSE], drop = 4)/total_river_length)*100,
+        Index_ctl=array((SD_effective_area_ctl[,,,'Estimate']/total_river_length)*100,dim(SD_effective_area_ctl)[1:3]),
+        sd_Index_ctl=array((SD_effective_area_ctl[,,,'Std. Error']/total_river_length)*100,dim(SD_effective_area_ctl)[1:3]),
+        year_labels = as.character(year_labels),
+        years_to_plot = years_to_plot,
+        strata_names = strata_names,
+        category_names = category_names,
+        DirName = "",
+        PlotName = FileName_EffArea,
+        #scale = "log",
+        scale = "uniform",
+        interval_width = interval_width,
+        xlab = "Year",
+        ylab = "% River length occupied",
+        Yrange = c(NA,NA),
+        width = ceiling(TmbData$n_c/ceiling(sqrt(TmbData$n_c)))*4,
+        #plot_args = list(log="y"),
+        height = ceiling(sqrt(TmbData$n_c))*4 )
 
 
 
-# plot_index_SN <-
-#   function( Index_ctl,
-#             sd_Index_ctl = array(0,dim(Index_ctl)),
-#             year_labels = NULL,
-#             years_to_plot = NULL,
-#             strata_names = NULL,
-#             category_names = NULL,
-#             scale = "uniform",
-#             plot_legend = NULL,
-#             DirName = paste0(getwd(),"/"),
-#             PlotName = "Index.png",
-#             interval_width = 1,
-#             width = NULL,
-#             height = NULL,
-#             xlab = "Year",
-#             ylab = "Index",
-#             bounds_type = "whiskers",
-#             col = NULL,
-#             col_bounds = NULL,
-#             Yrange = c(0,NA),
-#             type = "b",
-#             plot_lines_args = list(),
-#             plot_args = list(),
-#             SampleSize_ctz = NULL,
-#             Y2range = c(0,NA),
-#             y2lab = "",
-#             ... ){
-#     
-#     # Change inputs
-#     if( length(dim(Index_ctl))==length(dim(sd_Index_ctl)) ){
-#       if( length(dim(Index_ctl))==2 ){
-#         Index_ctl = Index_ctl %o% rep(1,1)
-#         sd_Index_ctl = sd_Index_ctl %o% rep(1,1)
-#       }
-#     }else{
-#       stop("Mismatch in dimensions for `Index_ctl` and `sd_Index_ctl` in `plot_index`")
-#     }
-#     n_categories = dim(Index_ctl)[1]
-#     n_years = dim(Index_ctl)[2]
-#     n_strata = dim(Index_ctl)[3]
-#     mfrow = c( ceiling(sqrt(n_categories)), ceiling(n_categories/ceiling(sqrt(n_categories))) )
-#     if( !is.null(SampleSize_ctz) ){
-#       if( !all( dim(SampleSize_ctz)[1:2] == dim(Index_ctl)[1:2] ) ){
-#         stop("Check input `SampleSize_ctz`")
-#       }
-#     }
-#     
-#     if(any(is.na(as.numeric(year_labels)))){
-#       x_Years = 1:length(year_labels)
-#     }else{
-#       x_Years = as.numeric(year_labels)
-#     }
-#     #if( all(is.numeric(Year_Set)) ){
-#     #  year_names = Year_Set
-#     #}else{
-#     #  year_names = Year_Set
-#     #  Year_Set = 1:length(Year_Set)
-#     #}
-#     
-#     Pretty = function(vec){
-#       Return = pretty(vec)
-#       Return = Return[which(Return %in% vec)]
-#       return(Return)
-#     }
-#     
-#     # Defaults
-#     if( is.null(col)) col = rainbow(n_strata)
-#     if( is.null(col_bounds)) col_bounds = rainbow(n_strata)
-#     if( is.null(width)) width = mfrow[2] * 3
-#     if( is.null(height)) height = mfrow[1] * 3
-#     
-#     # Fill in missing
-#     if( is.null(year_labels) ) year_labels = 1:n_years
-#     if( is.null(years_to_plot) ) years_to_plot = 1:n_years
-#     if( is.null(strata_names) ) strata_names = 1:n_strata
-#     if( is.null(category_names) ) category_names = 1:n_categories
-#     if( is.null(plot_legend)) plot_legend = ifelse(n_strata>1, TRUE, FALSE)
-#     
-#     # Plot
-#     Par = combine_lists( default=list(mar=c(2,2,1,0),mgp=c(2,0.5,0),tck=-0.02,yaxs="i",oma=c(2,2,0,0),mfrow=mfrow), input=list(...) )
-#     if(!is.na(PlotName)){
-#       png( file=paste0(DirName,PlotName), width=width, height=height, res=200, units="in")  # paste0(DirName,ifelse(DirName=="","","/"),PlotName)
-#       on.exit( dev.off() )
-#     }
-#     par( Par )
-#     for( z1 in 1:n_categories ){
-#       # Calculate y-axis limits
-#       if(scale=="uniform") Ylim = range(Index_ctl[z1,years_to_plot,]%o%c(1,1) + sd_Index_ctl[z1,years_to_plot,]%o%c(-interval_width,interval_width)*1.05, na.rm=TRUE)
-#       if(scale=="log") Ylim = range(Index_ctl[z1,years_to_plot,]%o%c(1,1) * exp(sd_Index_ctl[z1,years_to_plot,]%o%c(-interval_width,interval_width)*1.05), na.rm=TRUE)
-#       Ylim = ifelse( is.na(Yrange), Ylim, Yrange )
-#       Xlim = range(x_Years[years_to_plot]) + c(-1,1) * diff(range(x_Years[years_to_plot]))/20
-#       # Plot stuff
-#       plot_inputs = combine_lists( default=list(1, type="n", xlim=Xlim, ylim=Ylim, xlab="", ylab="", main=ifelse(n_categories>1,category_names[z1],""), xaxt="n"),
-#                                    input=plot_args )
-#       do.call( what=plot, args=plot_inputs )
-#       for(z3 in 1:n_strata){
-#         if(scale=="uniform") ybounds = Index_ctl[z1,years_to_plot,z3]%o%c(1,1) + sd_Index_ctl[z1,years_to_plot,z3]%o%c(-interval_width,interval_width)
-#         if(scale=="log") ybounds = Index_ctl[z1,years_to_plot,z3]%o%c(1,1) * exp(sd_Index_ctl[z1,years_to_plot,z3]%o%c(-interval_width,interval_width))
-#         if( n_strata==1 ) x_offset = 0
-#         if( n_strata>=2 ) x_offset = seq(-0.1, 0.1, length=n_strata)[z3]
-#         plot_lines_defaults = list( y=Index_ctl[z1,years_to_plot,z3], x=x_Years[years_to_plot]+x_offset, ybounds=ybounds, type=type, col=col[z3], col_bounds=col_bounds[z3],
-#                                     ylim=Ylim, bounds_type=bounds_type )
-#         plot_lines_inputs = combine_lists( default=plot_lines_defaults, input=plot_lines_args )
-#         do.call( what=plot_lines, args=plot_lines_inputs )
-#       }
-#       # Plot lines for sample size
-#       if( !is.null(SampleSize_ctz) ){
-#         Y2lim = c(1, 1.2) * range(SampleSize_ctz[z1,years_to_plot,], na.rm=TRUE)
-#         Y2lim = ifelse( is.na(Y2range), Y2lim, Y2range )
-#         Labels = pretty(Y2lim)
-#         At = Labels / diff(range(Y2lim,na.rm=TRUE)) * diff(Ylim) + Ylim[1]
-#         axis( side=4, at=At, labels=Labels )
-#         for( z3 in 1:dim(SampleSize_ctz)[3] ){
-#           Y = SampleSize_ctz[z1,years_to_plot,z3] / diff(range(Y2lim,na.rm=TRUE)) * diff(Ylim) + Ylim[1]
-#           lines( x=x_Years, y=Y, col=col[z3], lwd=3, lty="dotted" )
-#           #points( x=year_labels, y=Y, col=col[z3], cex=1.5 )
-#         }
-#       }
-#       if(plot_legend==TRUE){
-#         legend( "top", bty="n", fill=rainbow(n_strata), legend=as.character(strata_names), ncol=2 )
-#       }
-#       axis( 1, at=Pretty(x_Years[years_to_plot]), labels=year_labels[match(Pretty(x_Years[years_to_plot]),x_Years)] )
-#     }
-#     mtext( side=c(1,2,4), text=c(xlab,ylab,y2lab), outer=TRUE, line=c(0,0) )
-#     
-#     return(invisible(plot_lines_inputs))
-#   }
+      #png( file=FileName_EffArea, width=ceiling(TmbData$n_c/ceiling(sqrt(TmbData$n_c)))*2.5, height=ceiling(sqrt(TmbData$n_c))*2.5, res=200, units="in")
+      #  par( mfrow=c(1,1), mar=c(2,2,1,0), mgp=c(1.75,0.25,0), tck=-0.02, oma=c(1,1,1,0), mfrow=c(ceiling(sqrt(TmbData$n_c)),ceiling(TmbData$n_c/ceiling(sqrt(TmbData$n_c)))))
+      #  for( cI in 1:TmbData$n_c ){
+      #    Ybounds = SD_log_effective_area_ctl[cI,,1,1]%o%rep(interval_width,2) + SD_log_effective_area_ctl[cI,,1,2]%o%c(-interval_width,interval_width)
+      #    plot_lines( x=year_labels, y=SD_log_effective_area_ctl[cI,,1,1], ybounds=Ybounds, ylim=range(Ybounds), fn=plot, bounds_type="shading", col_bounds=rgb(1,0,0,0.2), col="red", lwd=2, xlab="", ylab="", type="l", main=category_names[cI])
+      #  }
+      #  mtext( side=1:3, text=c("Year","ln(km^2)","Effective area occupied"), outer=TRUE, line=c(0,0,0) )
+      #dev.off()
+
+      # Write to file
+      EffectiveArea_Table = NULL
+      for( cI in 1:TmbData$n_c ){
+        Tmp = cbind("Year"=year_labels, "EffectiveArea"=SD_log_effective_area_ctl[cI,,1,1], "SE"=SD_log_effective_area_ctl[cI,,1,2])
+        if( TmbData$n_c>1 ) Tmp = cbind( "Category"=category_names[cI], Tmp)
+        EffectiveArea_Table = rbind(EffectiveArea_Table, Tmp)
+      }
+
+      # Return stuff
+      Return = c(Return, list("SD_effective_area_ctl"=SD_effective_area_ctl, "SD_log_effective_area_ctl"=SD_log_effective_area_ctl, "EffectiveArea_Table"=EffectiveArea_Table))
+    }
+
+    # Return list of stuff
+    return( invisible(Return) )
+  }
+
+
+
+plot_index_SN <-
+  function( Index_ctl,
+            sd_Index_ctl = array(0,dim(Index_ctl)),
+            year_labels = NULL,
+            years_to_plot = NULL,
+            strata_names = NULL,
+            category_names = NULL,
+            scale = "uniform",
+            plot_legend = NULL,
+            DirName = paste0(getwd(),"/"),
+            PlotName = "Index.png",
+            interval_width = 1,
+            width = NULL,
+            height = NULL,
+            xlab = "Year",
+            ylab = "Index",
+            bounds_type = "whiskers",
+            col = NULL,
+            col_bounds = NULL,
+            Yrange = c(0,NA),
+            type = "b",
+            plot_lines_args = list(),
+            plot_args = list(),
+            SampleSize_ctz = NULL,
+            Y2range = c(0,NA),
+            y2lab = "",
+            ... ){
+    
+    # Local function
+    plot_lines <-
+      function( x,
+                y,
+                ybounds,
+                fn = lines,
+                col_bounds = "black",
+                bounds_type = "whiskers",
+                border = NA,
+                border_lty = "solid",
+                lwd_bounds = 1,
+                ... ){
+        
+        # Function still used in plot_index
+        #warning( "`plot_lines` is soft-deprecated" )
+        
+        fn( y=y, x=x, ... )
+        if( bounds_type=="whiskers" ){
+          for(t in 1:length(y)){
+            lines( x=rep(x[t],2), y=ybounds[t,], col=col_bounds, lty=border_lty, lwd=lwd_bounds)
+          }
+        }
+        if( bounds_type=="shading" ){
+          polygon( x=c(x,rev(x)), y=c(ybounds[,1],rev(ybounds[,2])), col=col_bounds, border=border, lty=border_lty)
+        }
+      }
+    
+
+    # Change inputs
+    if( length(dim(Index_ctl))==length(dim(sd_Index_ctl)) ){
+      if( length(dim(Index_ctl))==2 ){
+        Index_ctl = Index_ctl %o% rep(1,1)
+        sd_Index_ctl = sd_Index_ctl %o% rep(1,1)
+      }
+    }else{
+      stop("Mismatch in dimensions for `Index_ctl` and `sd_Index_ctl` in `plot_index`")
+    }
+    n_categories = dim(Index_ctl)[1]
+    n_years = dim(Index_ctl)[2]
+    n_strata = dim(Index_ctl)[3]
+    mfrow = c( ceiling(sqrt(n_categories)), ceiling(n_categories/ceiling(sqrt(n_categories))) )
+    if( !is.null(SampleSize_ctz) ){
+      if( !all( dim(SampleSize_ctz)[1:2] == dim(Index_ctl)[1:2] ) ){
+        stop("Check input `SampleSize_ctz`")
+      }
+    }
+
+    if(any(is.na(as.numeric(year_labels)))){
+      x_Years = 1:length(year_labels)
+    }else{
+      x_Years = as.numeric(year_labels)
+    }
+    #if( all(is.numeric(Year_Set)) ){
+    #  year_names = Year_Set
+    #}else{
+    #  year_names = Year_Set
+    #  Year_Set = 1:length(Year_Set)
+    #}
+
+    Pretty = function(vec){
+      Return = pretty(vec)
+      Return = Return[which(Return %in% vec)]
+      return(Return)
+    }
+
+    # Defaults
+    if( is.null(col)) col = rainbow(n_strata)
+    if( is.null(col_bounds)) col_bounds = rainbow(n_strata)
+    if( is.null(width)) width = mfrow[2] * 3
+    if( is.null(height)) height = mfrow[1] * 3
+
+    # Fill in missing
+    if( is.null(year_labels) ) year_labels = 1:n_years
+    if( is.null(years_to_plot) ) years_to_plot = 1:n_years
+    if( is.null(strata_names) ) strata_names = 1:n_strata
+    if( is.null(category_names) ) category_names = 1:n_categories
+    if( is.null(plot_legend)) plot_legend = ifelse(n_strata>1, TRUE, FALSE)
+
+    # Plot
+    Par = combine_lists( default=list(mar=c(2,2,1,0),mgp=c(2,0.5,0),tck=-0.02,yaxs="i",oma=c(2,2,0,0),mfrow=mfrow), input=list(...) )
+    if(!is.na(PlotName)){
+      png( file=paste0(DirName,PlotName), width=width, height=height, res=200, units="in")  # paste0(DirName,ifelse(DirName=="","","/"),PlotName)
+      on.exit( dev.off() )
+    }
+    par( Par )
+    for( z1 in 1:n_categories ){
+      # Calculate y-axis limits
+      if(scale=="uniform") Ylim = range(Index_ctl[z1,years_to_plot,]%o%c(1,1) + sd_Index_ctl[z1,years_to_plot,]%o%c(-interval_width,interval_width)*1.05, na.rm=TRUE)
+      if(scale=="log") Ylim = range(Index_ctl[z1,years_to_plot,]%o%c(1,1) * exp(sd_Index_ctl[z1,years_to_plot,]%o%c(-interval_width,interval_width)*1.05), na.rm=TRUE)
+      Ylim = ifelse( is.na(Yrange), Ylim, Yrange )
+      Xlim = range(x_Years[years_to_plot]) + c(-1,1) * diff(range(x_Years[years_to_plot]))/20
+      # Plot stuff
+      plot_inputs = combine_lists( default=list(1, type="n", xlim=Xlim, ylim=Ylim, xlab="", ylab="", main=ifelse(n_categories>1,category_names[z1],""), xaxt="n"),
+                                   input=plot_args )
+      do.call( what=plot, args=plot_inputs )
+      for(z3 in 1:n_strata){
+        if(scale=="uniform") ybounds = Index_ctl[z1,years_to_plot,z3]%o%c(1,1) + sd_Index_ctl[z1,years_to_plot,z3]%o%c(-interval_width,interval_width)
+        if(scale=="log") ybounds = Index_ctl[z1,years_to_plot,z3]%o%c(1,1) * exp(sd_Index_ctl[z1,years_to_plot,z3]%o%c(-interval_width,interval_width))
+        if( n_strata==1 ) x_offset = 0
+        if( n_strata>=2 ) x_offset = seq(-0.1, 0.1, length=n_strata)[z3]
+        plot_lines_defaults = list( y=Index_ctl[z1,years_to_plot,z3], x=x_Years[years_to_plot]+x_offset, ybounds=ybounds, type=type, col=col[z3], col_bounds=col_bounds[z3],
+                                    ylim=Ylim, bounds_type=bounds_type )
+        plot_lines_inputs = combine_lists( default=plot_lines_defaults, input=plot_lines_args )
+        do.call( what=plot_lines, args=plot_lines_inputs )
+      }
+      # Plot lines for sample size
+      if( !is.null(SampleSize_ctz) ){
+        Y2lim = c(1, 1.2) * range(SampleSize_ctz[z1,years_to_plot,], na.rm=TRUE)
+        Y2lim = ifelse( is.na(Y2range), Y2lim, Y2range )
+        Labels = pretty(Y2lim)
+        At = Labels / diff(range(Y2lim,na.rm=TRUE)) * diff(Ylim) + Ylim[1]
+        axis( side=4, at=At, labels=Labels )
+        for( z3 in 1:dim(SampleSize_ctz)[3] ){
+          Y = SampleSize_ctz[z1,years_to_plot,z3] / diff(range(Y2lim,na.rm=TRUE)) * diff(Ylim) + Ylim[1]
+          lines( x=x_Years, y=Y, col=col[z3], lwd=3, lty="dotted" )
+          #points( x=year_labels, y=Y, col=col[z3], cex=1.5 )
+        }
+      }
+      if(plot_legend==TRUE){
+        legend( "top", bty="n", fill=rainbow(n_strata), legend=as.character(strata_names), ncol=2 )
+      }
+      axis( 1, at=Pretty(x_Years[years_to_plot]), labels=year_labels[match(Pretty(x_Years[years_to_plot]),x_Years)] )
+    }
+    mtext( side=c(1,2,4), text=c(xlab,ylab,y2lab), outer=TRUE, line=c(0,0) )
+
+    return(invisible(plot_lines_inputs))
+  }
 
 
 

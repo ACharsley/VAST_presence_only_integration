@@ -1,0 +1,135 @@
+---
+title: "Modelling results"
+author: "Anthony Charsley"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, root.dir = rprojroot::find_rstudio_root_file())
+
+# clear R
+rm(list=ls())
+
+# Load libraries 
+library(knitr)
+
+# Set paths
+model_path <- "C:/Users/charsleyar/OneDrive - NIWA/PhD_stuff/Projects/VAST_presence_only_integration/Models"
+#model_path <- file.path(model_path, "Initial_models")
+```
+
+
+```{r Model_output_table_setup, include=FALSE, echo=FALSE}
+# Scenarios
+scenarios <- c("Structured data only",
+              "1a", "1b", "1c", "1d",  #1d model failed
+              "2a", "2b", "2c", "2d",
+              "3a", "3b", "3c", "3d", #3c model failed
+              "4a", "4b", "4c", "4d")
+
+pars <- c("L_omega1_z", "L_epsilon1_z", "L_beta_z", "logkappa1", "log_sigmaPhi1_k")
+
+model_output_df <- data.frame("Scenario"=scenarios)
+
+
+for(sce in scenarios){
+  
+  if(sce == "Structured data only"){
+    path <- file.path(model_path, "Taranaki_data_model")
+  }else{
+    path <- file.path(model_path, paste0("Model_", sce))
+  }
+  
+  if(file.exists(file.path(path, "parameter_estimates.RData"))){
+    #Load parameters
+  load(file.path(path, "parameter_estimates.RData"))
+  
+  #Extract parameters and add to dataframe
+  parameters <- TMB::summary.sdreport(parameter_estimates$SD)
+  
+  par_L_omega1_z <- parameters[rownames(parameters) == "L_omega1_z", "Estimate"]
+  se_L_omega1_z <- parameters[rownames(parameters) == "L_omega1_z", "Std. Error"]
+  model_output_df[model_output_df$Scenario == sce, "L_omega1_z"] <- paste0(signif(par_L_omega1_z, digits=4)," (",signif(se_L_omega1_z, digits=4),")")
+  
+  
+  par_L_epsilon1_z <- parameters[rownames(parameters) == "L_epsilon1_z", "Estimate"]
+  se_L_epsilon1_z <- parameters[rownames(parameters) == "L_epsilon1_z", "Std. Error"]
+  model_output_df[model_output_df$Scenario == sce, "L_epsilon1_z"] <- paste0(signif(par_L_epsilon1_z, digits=4)," (",signif(se_L_epsilon1_z, digits=4),")")
+  
+  
+  par_L_beta1_z <- parameters[rownames(parameters) == "L_beta1_z", "Estimate"]
+  se_L_beta1_z <- parameters[rownames(parameters) == "L_beta1_z", "Std. Error"]
+  model_output_df[model_output_df$Scenario == sce, "L_beta1_z"] <- paste0(signif(par_L_beta1_z, digits=4)," (",signif(se_L_beta1_z, digits=4),")")
+  
+  
+  par_logkappa1 <- parameters[rownames(parameters) == "logkappa1", "Estimate"]
+  se_logkappa1 <- parameters[rownames(parameters) == "logkappa1", "Std. Error"]
+  model_output_df[model_output_df$Scenario == sce, "logkappa1"] <- paste0(signif(par_logkappa1, digits=4)," (",signif(se_logkappa1, digits=4),")")
+  
+  
+  par_log_sigmaPhi1_k1 <- parameters[rownames(parameters) == "log_sigmaPhi1_k", "Estimate"][1]
+  se_log_sigmaPhi1_k1 <- parameters[rownames(parameters) == "log_sigmaPhi1_k", "Std. Error"][1]
+  model_output_df[model_output_df$Scenario == sce, "log_sigmaPhi1_k (Structured Net/Trap data)"] <- paste0(signif(par_log_sigmaPhi1_k1, digits=4)," (",signif(se_log_sigmaPhi1_k1, digits=4),")")
+  
+  
+  par_log_sigmaPhi1_k2 <- parameters[rownames(parameters) == "log_sigmaPhi1_k", "Estimate"][2]
+  se_log_sigmaPhi1_k2 <- parameters[rownames(parameters) == "log_sigmaPhi1_k", "Std. Error"][2]
+  model_output_df[model_output_df$Scenario == sce, "log_sigmaPhi1_k (Unstructured data)"] <- paste0(signif(par_log_sigmaPhi1_k2, digits=4)," (",signif(se_log_sigmaPhi1_k2, digits=4),")")
+  
+  
+  #Maximum gradient 
+  model_output_df[model_output_df$Scenario == sce, "Maximum gradient"] <- signif(parameter_estimates$max_gradient,4)
+  }
+  
+}
+```
+
+## Case study: Longfin eel in the Taranaki region:
+
+```{r Model_output_table, echo=FALSE}
+kable(model_output_df, caption="Parameter estimates, standard errors, and model maximum gradients from each modelling scenario.")
+```
+
+
+```{r Cross_validation_table_setup, echo=FALSE}
+CV_table_df <- data.frame("Scenario"=scenarios)
+
+for(sce in scenarios){
+  
+  if(sce == "Structured data only"){
+    path <- file.path(model_path, paste0("Taranaki_data_model"))
+  }else{
+    path <- file.path(model_path, paste0("Model_", sce))
+  }
+  
+  if(file.exists(file.path(path, "CV/CV_results.RData"))){
+    #Load CV results
+  load(file.path(path, "CV/CV_results.RData"))
+  
+  #Specificity
+  CV_table_df[CV_table_df$Scenario == sce,"Mean Specificity"] <- round(mean(unlist(cv_list$sp)), 2)
+  CV_table_df[CV_table_df$Scenario == sce,"Median (min-max) Specificity"] <- paste0(round(median(unlist(cv_list$sp)), 2), " (", round(min(unlist(cv_list$sp)), 2), "-", round(max(unlist(cv_list$sp)), 2), ")")
+  
+  #Specificity
+  CV_table_df[CV_table_df$Scenario == sce,"Mean Sensitivity"] <- round(mean(unlist(cv_list$sn)), 2)
+  CV_table_df[CV_table_df$Scenario == sce,"Median (min-max) Sensitivity"] <- paste0(round(median(unlist(cv_list$sn)), 2), " (", round(min(unlist(cv_list$sn)), 2), "-", round(max(unlist(cv_list$sn)), 2), ")")
+  
+  #AUC
+  CV_table_df[CV_table_df$Scenario == sce,"Mean AUC"] <- round(cv_list$AUC$mean_est, 2)
+  CV_table_df[CV_table_df$Scenario == sce,"Median (min-max) AUC"] <- paste0(round(median(cv_list$AUC$estimates), 2), " (",round(min(cv_list$AUC$estimates), 2),"-", round(max(cv_list$AUC$estimates), 2), ")")
+  
+  #TSS
+  TSS <- unlist(cv_list$TSS)[names(unlist(cv_list$TSS)) == "TSS"]
+  CV_table_df[CV_table_df$Scenario == sce,"Mean TSS"] <- round(mean(TSS), 2)
+  CV_table_df[CV_table_df$Scenario == sce,"Median (min-max) TSS"] <- paste0(round(median(TSS), 2), " (",round(min(TSS), 2),"-", round(max(TSS), 2), ")")
+  }
+
+}
+```
+
+
+```{r Cross_validation_table, echo=FALSE}
+kable(CV_table_df, caption = "Cross validation specificity, sensitivity, area under the receiver operator characteristic curve (AUC) and true skill statistic (TSS) results (mean, median and range) for each modelling scenario.")
+```

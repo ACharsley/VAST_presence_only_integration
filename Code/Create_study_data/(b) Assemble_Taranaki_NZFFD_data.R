@@ -268,6 +268,9 @@ table(NZFFD_ene$Year, NZFFD_ene$`Anguilla dieffenbachii`)
 NZFFD_ene$`Anguilla dieffenbachii` <- factor(NZFFD_ene$`Anguilla dieffenbachii`, levels = c("FALSE", "TRUE"))
 NZFFD_ene$`Anguilla dieffenbachii` <- as.numeric(NZFFD_ene$`Anguilla dieffenbachii`) - 1
 
+#Add Data_source variable
+NZFFD_ene$Data_source <- ifelse(NZFFD_ene$FishMethod == "Electric fishing", "Structured_EF", 
+                        ifelse(NZFFD_ene$FishMethod %in% c("Net", "Trap"), "Structured_NetTrap", NA))
 
 
 ###################################################
@@ -290,8 +293,8 @@ table(NZFFD_eo$Year)
 NZFFD_eo <- NZFFD_eo %>%
   select(nzffdRecordNumber, nzsegment, Lat, Lon, catchmentName, catchmentNumber, #Variables related to identifability and location
          child_i, parent_i, dist_i, #variables derived for stream network modelling
-         Year, institution, FishMethod) %>% #variables specific to sampling
-  mutate("Anguilla dieffenbachii"=1, "org"="presence_only")
+         Year, org, institution, FishMethod) %>% #variables specific to sampling
+  mutate("Anguilla dieffenbachii"=1, "Data_source" = "Unstructured")
 
 
 

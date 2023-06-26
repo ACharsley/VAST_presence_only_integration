@@ -85,9 +85,10 @@ network_to_sample <- network_to_sample %>%
          "org" = "pseudo_absence",
          "institution" = "Pseudo absence",
          "FishMethod" = "Other",
+         "Data_source" = "Unstructured",
          "Anguilla dieffenbachii" = 0) %>%
   relocate("nzffdRecordNumber","nzsegment","Lat","Lon","catchmentName","catchmentNumber","child_i","parent_i","dist_i",
-           "org", "institution", "FishMethod", "Anguilla dieffenbachii")
+           "org", "institution", "FishMethod", "Data_source", "Anguilla dieffenbachii")
 
 
 ##################################
@@ -142,7 +143,7 @@ for(i in c(1:length(years_to_sample))){
     ## a. As many as the encounter-only data
     sample_1a[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
     
-    ## b. Twice as many as the encounter-only data
+    ## b. 5x as many as the encounter-only data
     sample_1b[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*5),]
     
     ## c. 10x as many as the encounter-only data
@@ -188,6 +189,10 @@ sample_OM_1b <- do.call(rbind, sample_OM_1b)
 suitable_hab_to_remove <- HSM_encounter_prob %>%
   filter(POE >= unsuit_hab_cutoff) %>% pull(child_s)
 
+#Save
+saveRDS(suitable_hab_to_remove, file.path(data_taranaki_dir, "Child_s_suitable_hab_to_remove.rds"))
+
+
 sample_2a = sample_2b = sample_2c = sample_2d =  sample_OM_2a = sample_OM_2b = list()
 
 set.seed(100323)
@@ -230,7 +235,7 @@ for(i in c(1:length(years_to_sample))){
     ## a. As many as the encounter-only data
     sample_2a[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
     
-    ## b. Twice as many as the encounter-only data
+    ## b. 5x as many as the encounter-only data
     sample_2b[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*5),]
     
     ## c. 10x as many as the encounter-only data
@@ -291,7 +296,10 @@ dist_road_sn_plot <- ggplot(network_to_sample_SF, aes(distance_to_road_km)) +
 ggsave(file.path(fig_dir, "Distance_to_road_stream_network.png"), dist_road_sn_plot, height = 12, width = 15)
 
 #Examine distance to road in the structured data
-NZFFD_sample_bias <- right_join(network_to_sample_SF, NZFFD_data)
+network_for_plot <- network_to_sample_SF %>% 
+  select(c("child_i", "parent_i", "distance_to_road_km"))
+
+NZFFD_sample_bias <- right_join(network_for_plot, NZFFD_data)
 summary(NZFFD_sample_bias$distance_to_road_km)
 NZFFD_sample_bias$Presence_or_absence <- factor(NZFFD_sample_bias$`Anguilla dieffenbachii`)
 distance_to_road_NZFFD_hist <- ggplot(NZFFD_sample_bias, aes(distance_to_road_km, fill=Presence_or_absence)) +
@@ -300,19 +308,22 @@ distance_to_road_NZFFD_hist <- ggplot(NZFFD_sample_bias, aes(distance_to_road_km
 ggsave(file.path(fig_dir, "Distance_to_road_structured_data.png"), distance_to_road_NZFFD_hist, height = 12, width = 15)
 
 #Examine the samplying bias in the unstructured data
-presence_only_sample_bias <- right_join(network_to_sample_SF, encounter_only_lf_data)
+presence_only_sample_bias <- right_join(network_for_plot, encounter_only_lf_data)
 summary(presence_only_sample_bias$distance_to_road_km)
 dist_to_road_presenceonly_hist <- ggplot(presence_only_sample_bias, aes(distance_to_road_km)) +
   geom_histogram(alpha=0.5, bins=30) +
   ggtitle("Distance to road (km) of unstructured data")
 ggsave(file.path(fig_dir, "Distance_to_road_unstructured_data.png"), dist_to_road_presenceonly_hist, height = 12, width = 15)
 
-dist_cut_off <- summary(presence_only_sample_bias$distance_to_road_km)["3rd Qu."] #0.6618799
+dist_cut_off <- summary(presence_only_sample_bias$distance_to_road_km)["3rd Qu."] #0.6573748
 #########
 
 ## Extract locations that are further than 2km from a road
 locations_far_from_roads <- network_to_sample_SF %>%
   filter(distance_to_road_km > 0.5) %>% pull(child_i)
+
+#Save
+saveRDS(locations_far_from_roads, file.path(data_taranaki_dir, "Child_s_locations_far_from_roads.rds"))
 
 sample_3a = sample_3b = sample_3c = sample_3d =  sample_OM_3a = sample_OM_3b = list()
 
@@ -355,7 +366,7 @@ for(i in c(1:length(years_to_sample))){
     ## a. As many as the encounter-only data
     sample_3a[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
     
-    ## b. Twice as many as the encounter-only data
+    ## b. 5x as many as the encounter-only data
     sample_3b[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*5),]
     
     ## c. 10x as many as the encounter-only data
@@ -435,7 +446,7 @@ for(i in c(1:length(years_to_sample))){
     ## a. As many as the encounter-only data
     sample_4a[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
     
-    ## b. Twice as many as the encounter-only data
+    ## b. 5x as many as the encounter-only data
     sample_4b[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*5),]
     
     ## c. 10x as many as the encounter-only data
