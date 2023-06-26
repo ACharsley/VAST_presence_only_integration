@@ -35,11 +35,11 @@ dir.create(VAST_input_data_dir, showWarnings = F)
 #################################
 
 scenarios <- c("Taranaki data", 
-               "1a", "1b", "1c", "1d", 
-               "2a", "2b", "2c", "2d",
-               "3a", "3b", "3c", "3d",
-               "4a", "4b", "4c", "4d")
-network_type <- "downstream" #full
+               "1a", "1b", "1c", "1d", "OM_1a", "OM_1b",
+               "2a", "2b", "2c", "2d", "OM_2a", "OM_2b",
+               "3a", "3b", "3c", "3d", "OM_3a", "OM_3b",
+               "4a", "4b", "4c", "4d", "OM_4a", "OM_4b")
+network_type <- "full" #"downstream"
 
 VAST_input_data <- list()
 
@@ -74,11 +74,8 @@ for(sce in scenarios){ #sce = "Taranaki data" #sce = "1a"
   # Set data up for VAST #
   ########################
   
-  ## 1. Build data type variable and build catchability covariate
-  obs$Data_type <- ifelse(obs$FishMethod == "Electric fishing", "Structured_EF", 
-                          ifelse(obs$FishMethod %in% c("Net", "Trap"), "Structured_NetTrap", 
-                                 ifelse(obs$FishMethod == "Other", "Unstructured", NA)))
-  fct_count(obs$Data_type)
+  ## 1. Examine data type variable
+  fct_count(obs$Data_source)
 
   ## 2. Examine fishing method
   fct_count(obs$FishMethod)
@@ -93,10 +90,7 @@ for(sce in scenarios){ #sce = "Taranaki data" #sce = "1a"
   addmargins(table(obs$`Anguilla dieffenbachii`, obs$Year))
   #addmargins(table(obs$Year, obs$`Anguilla dieffenbachii`))
   
-  addmargins(table(obs$Year, obs$Data_type)) #Some years, data type doesn't overlap. Is that an issue?
-  
-  #Remove pre-1970s data
-  obs <- obs %>% filter(Year >= 1970)
+  addmargins(table(obs$Year, obs$Data_source)) #Some years, data type doesn't overlap. Is that an issue?
   
   ## 5. Create final dataset
   #Data for longfin eel catch
@@ -105,7 +99,7 @@ for(sce in scenarios){ #sce = "Taranaki data" #sce = "1a"
                             Child_i=obs$child_i,
                             Year=obs$Year,
                             Catch_KG=obs$`Anguilla dieffenbachii`, 
-                            Data_type=obs$Data_type,
+                            Data_source=obs$Data_source,
                             Sampler = obs$org,
                             FishMethod = obs$FishMethod,
                             Length = obs$dist_i) 
@@ -123,28 +117,42 @@ for(sce in scenarios){ #sce = "Taranaki data" #sce = "1a"
   
   # All covariate names
   covars_all <- dimnames(X_gctp)[[4]]
-  n_p <- length(covars_all)
-  
-  #Create habitat data matrix at observation locations
-  n_i <- nrow(Data_Geostat)
   yrs <- min(Data_Geostat$Year):max(Data_Geostat$Year)
-  n_t <- length(yrs)
-  hab_children <- as.numeric(rownames(X_gctp))
   
   X_gctp <- X_gctp[,,as.character(yrs),,drop=F] # This ensures that if any years are dropped then X_gctp has the right years still
   
-  X_itp <- array(0, dim=c(n_i,n_t,n_p))
-  for(i in 1:n_i){
-    for(p in 1:n_p){
-      child_i <- Data_Geostat$Child_i[i]
-      index <- which(hab_children == child_i)
-      X_itp[i,,p] <- X_gctp[index,,as.character(yrs),p] #All categories are the same so dont need to loop by c
-    }
-  }
+  
+  #Create habitat data matrix at observation locations
+  # n_p <- length(covars_all)
+  # n_i <- nrow(Data_Geostat)
+  # n_t <- length(yrs)
+  # hab_children <- as.numeric(rownames(X_gctp))
+  # 
+  # X_itp <- array(0, dim=c(n_i,n_t,n_p))
+  # for(i in 1:n_i){
+  #   for(p in 1:n_p){
+  #     child_i <- Data_Geostat$Child_i[i]
+  #     index <- which(hab_children == child_i)
+  #     X_itp[i,,p] <- X_gctp[index,,as.character(yrs),p] #All categories are the same so dont need to loop by c
+  #   }
+  # }
+  
+  X_gctp_df <- as.data.frame.table(X_gctp[,1,,])
+  covariate_df <- pivot_wider(data = X_gctp_df, names_from = "Var3", values_from = "Freq")
+  
+  #Fix up covariate df
+  covariate_df <- covariate_df %>% 
+    mutate("child_s" = as.numeric(levels(Var1))[Var1],"Year" = as.numeric(levels(Var2))[Var2])
+  #table(covariate_df$Var2) ; table(covariate_df$Year)
+  
+  covariate_df <- left_join(covariate_df, network) 
+  covariate_df <- covariate_df %>%
+    select(c(Year, Lon, Lat, all_of(covars_all)))
+  
   
   #check habitat covariates are right
-  all(rownames(X_gctp) == network$child_s)
-  all(rownames(X_itp) == Data_Geostat$Child_i)
+  #all(rownames(X_gctp) == network$child_s)
+  #all(rownames(X_itp) == Data_Geostat$Child_i)
   
   ###############
   ###############
@@ -152,8 +160,9 @@ for(sce in scenarios){ #sce = "Taranaki data" #sce = "1a"
   ## Save data ##
   VAST_input_data[[sce]]$Data_Geostat <- Data_Geostat
   VAST_input_data[[sce]]$network <- network
-  VAST_input_data[[sce]]$X_gctp <- X_gctp
-  VAST_input_data[[sce]]$X_itp <- X_itp
+  VAST_input_data[[sce]]$covariate_data <- covariate_df
+  #VAST_input_data[[sce]]$X_gctp <- X_gctp
+  #VAST_input_data[[sce]]$X_itp <- X_itp
   
 }
 
@@ -202,7 +211,7 @@ data_text <- data.frame("Year"= years, label=paste0(tab[2,], "/", tab[1,]),
 
 
 ## Structured electric fishing data 
-Data_to_plot_struc_EF <- Data_to_plot %>% filter(Data_type == "Structured_EF")
+Data_to_plot_struc_EF <- Data_to_plot %>% filter(Data_source == "Structured_EF")
 
 catchmap_struc_EF <- ggplot(Data_to_plot_struc_EF) +
   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
@@ -232,7 +241,7 @@ if(network_type == "full"){
 
 
 ## Structured Net and Trap data
-Data_to_plot_struc_NetTrap <- Data_to_plot %>% filter(Data_type == "Structured_NetTrap")
+Data_to_plot_struc_NetTrap <- Data_to_plot %>% filter(Data_source == "Structured_NetTrap")
 
 catchmap_struc_NetTrap <- ggplot(Data_to_plot_struc_NetTrap) +
   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
@@ -262,7 +271,7 @@ if(network_type == "full"){
 
 
 ## Unstructured data
-Data_to_plot_unstruc <- Data_to_plot %>% filter(Data_type == "Unstructured")
+Data_to_plot_unstruc <- Data_to_plot %>% filter(Data_source == "Unstructured")
 
 catchmap_unstruc <- ggplot(Data_to_plot_unstruc) +
   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
