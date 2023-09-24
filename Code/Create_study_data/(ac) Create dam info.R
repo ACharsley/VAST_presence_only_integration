@@ -6,7 +6,6 @@
 rm(list=ls())
 
 library(tidyverse)
-library(proj4)
 library(readxl)
 
 
@@ -30,7 +29,7 @@ dam_data <- read_excel(file.path(data_taranaki_dir, "Manually made data/Taranaki
 colnames(dam_data)
 
 dam_data_to_join <- dam_data %>% 
-  select(Distance_km, CatName, nzsegment, child_s, parent_s, NZDAM_ID,
+  dplyr::select(Distance_km, CatName, nzsegment, child_s, parent_s, NZDAM_ID,
          NAME_OF_DAM, DATE) %>%
   mutate(CatName_ID = paste0(CatName, "_",NZDAM_ID)) #Ensures that a barrier isn't lost when incorrectly assigned to multiple catchments
 
@@ -63,16 +62,16 @@ tapply(dam_data_to_join$Distance_km, dam_data_to_join$CatName_ID, max)
 
 
 #Waiaua - Oaonui Stream_NZD367
-dam_data_to_join$Year_barrier_finished[dam_data_to_join$CatName_ID == "Oaonui Stream_NZD367"] <- round(median(1978:2021))
+dam_data_to_join$Year_barrier_finished[dam_data_to_join$CatName_ID == "Oaonui Stream_NZD367"] <- round(median(1978:2022))
 
 #Timaru - Timaru Stream_NZD366
-dam_data_to_join$Year_barrier_finished[dam_data_to_join$CatName_ID == "Timaru Stream_NZD366"] <- round(median(1978:2021))
+dam_data_to_join$Year_barrier_finished[dam_data_to_join$CatName_ID == "Timaru Stream_NZD366"] <- round(median(1978:2022))
 
 #Timaru - Stony River (Hangatahua)_NZD366
-dam_data_to_join$Year_barrier_finished[dam_data_to_join$CatName_ID == "Stony River (Hangatahua)_NZD366"] <- round(median(1978:2021))
+dam_data_to_join$Year_barrier_finished[dam_data_to_join$CatName_ID == "Stony River (Hangatahua)_NZD366"] <- round(median(1978:2022))
 
 # NA (no dam name) - Mimi River_NZD397
-dam_data_to_join$Year_barrier_finished[dam_data_to_join$CatName_ID == "Mimi River_NZD397"] <- round(median(1978:2021))
+dam_data_to_join$Year_barrier_finished[dam_data_to_join$CatName_ID == "Mimi River_NZD397"] <- round(median(1978:2022))
 
 #Waitara River - Waitara River_NZD370
 dam_data_to_join$Year_barrier_finished[dam_data_to_join$CatName_ID == "Waitara River_NZD370"] <- 1924 #source: https://en.wikipedia.org/wiki/Motukawa_Power_Station

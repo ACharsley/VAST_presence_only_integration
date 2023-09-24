@@ -51,7 +51,7 @@ source(paste0(getwd(), "/Code/funcs.R"))
 # "OM_2a", "OM_2b"
 # "OM_3a", "OM_3b"
 # "OM_4a", "OM_4b"
-scenario <-   "3c" #"Taranaki data", "1d", "3c", "OM_1b", "OM_3b"
+scenario <-   "Taranaki data" #"Taranaki data", "1d", "3c", "OM_1b", "OM_3b"
 
 
 network_type <- "full"

@@ -2,7 +2,6 @@
 rm(list=ls())
 
 library(tidyverse)
-library(proj4)
 library(readxl)
 
 
@@ -33,25 +32,41 @@ dam_data <- read_excel(file.path(raw_data_dir, "latest_dams2004.xls"))
 
 #Convert northing/easting data to lat/long
 
-## function to calculate latitude and longitude from eastings and northings
-calc_NZ_latlon <- function(northing, easting){
-  #proj4string <- "+proj=tmerc +lat_0=0.0 +lon_0=173.0 +k=0.9996 +x_0=1600000.0 +y_0=10000000.0 +datum=WGS84 +units=m"
-  proj4string <- "+proj=nzmg +lat_0=-41 +lon_0=173 +x_0=2510000 +y_0=6023150 +ellps=intl +datum=nzgd49 +units=m +towgs84=59.47,-5.04,187.44,0.47,-0.1,1.024,-4.5993 +nadgrids=nzgd2kgrid0005.gsb +no_defs"
-  p <- project(matrix(c(easting, northing),nrow=1, ncol=2), proj=proj4string, inv=T)
-  colnames(p) <- c('long', 'lat')
-  return(p)
-}
+# ## function to calculate latitude and longitude from eastings and northings
+# calc_NZ_latlon <- function(northing, easting){
+#   #proj4string <- "+proj=tmerc +lat_0=0.0 +lon_0=173.0 +k=0.9996 +x_0=1600000.0 +y_0=10000000.0 +datum=WGS84 +units=m"
+#   proj4string <- "+proj=nzmg +lat_0=-41 +lon_0=173 +x_0=2510000 +y_0=6023150 +ellps=intl +datum=nzgd49 +units=m +towgs84=59.47,-5.04,187.44,0.47,-0.1,1.024,-4.5993 +nadgrids=nzgd2kgrid0005.gsb +no_defs"
+#   p <- project(matrix(c(easting, northing),nrow=1, ncol=2), proj=proj4string, inv=T)
+#   colnames(p) <- c('long', 'lat')
+#   return(p)
+# }
+# 
+# ## latitude and longitude for child nodes in network
+# dam_ll <- lapply(1:nrow(dam_data), function(x){
+#   p <- calc_NZ_latlon(northing = dam_data$NORTHING[x], easting = dam_data$EASTING[x])
+#   return(p)
+# })
+# dam_ll <- do.call(rbind, dam_ll)
+# dam_data_full <- cbind.data.frame(dam_data, dam_ll)
 
-## latitude and longitude for child nodes in network
-dam_ll <- lapply(1:nrow(dam_data), function(x){
-  p <- calc_NZ_latlon(northing = dam_data$NORTHING[x], easting = dam_data$EASTING[x])
-  return(p)
-})
-dam_ll <- do.call(rbind, dam_ll)
+#Projection info needed
+proj_latlong <- CRS("+init=epsg:4326")
+proj_XY <- "+init=epsg:2193"
 
-dam_data_full <- cbind.data.frame(dam_data, dam_ll)
+## Convert x/y network coords to lat/longs ##
+dam_xy <- as.data.frame(dam_data[,c("EASTING", "NORTHING")]) #x and y coordinates
+coordinates(dam_xy) <- c("EASTING", "NORTHING") #set as coordinates
+proj4string(dam_xy) <- proj_XY #Set current projection
 
-dam_data_full <- dam_data_full %>% select("NZDAM_ID", "NAME OF DAM", "OWNER", "DATE", "REF", "long", "lat")
+dam_latlong <- spTransform(dam_xy, proj_latlong) #project
+
+coords <- coordinates(dam_latlong)
+
+## Add new coords to ens_data
+dam_data$long <- coords[,"EASTING"]
+dam_data$lat <- coords[,"NORTHING"]
+
+dam_data_full <- dam_data %>% dplyr::select("NZDAM_ID", "NAME OF DAM", "OWNER", "DATE", "REF", "long", "lat")
 
 write_csv(dam_data_full, file = file.path(data_taranaki_dir, "dam_meta_data.csv"))
 

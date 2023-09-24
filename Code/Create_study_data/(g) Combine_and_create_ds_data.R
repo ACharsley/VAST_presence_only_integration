@@ -36,6 +36,8 @@ data_taranaki_dir <- "./Data_processed"
 fig_dir <- "./Data_processed/Figures"
 pseudoabsence_data_dir <- "./Data_processed/Pseudo_absence_data"
 
+covariate_plot_dir <- file.path(fig_dir, "Covariate_plots")
+
 
 ###################
 #  Load datasets  #
@@ -45,7 +47,8 @@ pseudoabsence_data_dir <- "./Data_processed/Pseudo_absence_data"
 network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
 
 ##Habitat data
-load(file.path(data_taranaki_dir, "Taranaki_X_gctp.RData"))
+#load(file.path(data_taranaki_dir, "Taranaki_X_gctp.RData"))
+load(file.path(data_taranaki_dir, "Covariate_data.RData"))
 
 ##NZFFD observations
 NZFFD_data <- readRDS(file.path(data_taranaki_dir, "Taranaki_NZFFD_ene_data.rds"))
@@ -138,6 +141,7 @@ Sample_OM_4b <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_4b.rds"))
 ####
 
 
+
 ######################
 #  Combine datasets  #
 ######################
@@ -145,44 +149,44 @@ Sample_OM_4b <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_4b.rds"))
 #Data set for habitat unsuitability model
 Taranaki_data <- list()
 Taranaki_data$network <- network
-Taranaki_data$X_gctp <- X_gctp
+Taranaki_data$covariate_df <- covariate_df
 Taranaki_data$obs <- NZFFD_data 
 
 #Randomly generated pseudo-absence data
 #a.
 Taranaki_data_1a <- list()
 Taranaki_data_1a$network <- network
-Taranaki_data_1a$X_gctp <- X_gctp
+Taranaki_data_1a$covariate_df <- covariate_df
 Taranaki_data_1a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_1a)
 
 #b.
 Taranaki_data_1b <- list()
 Taranaki_data_1b$network <- network
-Taranaki_data_1b$X_gctp <- X_gctp
+Taranaki_data_1b$covariate_df <- covariate_df
 Taranaki_data_1b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_1b)
 
 #c.
 Taranaki_data_1c <- list()
 Taranaki_data_1c$network <- network
-Taranaki_data_1c$X_gctp <- X_gctp
+Taranaki_data_1c$covariate_df <- covariate_df
 Taranaki_data_1c$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_1c)
 
 #d.
 Taranaki_data_1d <- list()
 Taranaki_data_1d$network <- network
-Taranaki_data_1d$X_gctp <- X_gctp
+Taranaki_data_1d$covariate_df <- covariate_df
 Taranaki_data_1d$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_1d)
 
 #OM - a.
 Taranaki_data_OM_1a <- list()
 Taranaki_data_OM_1a$network <- network
-Taranaki_data_OM_1a$X_gctp <- X_gctp
+Taranaki_data_OM_1a$covariate_df <- covariate_df
 Taranaki_data_OM_1a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_1a)
 
 #OM - b.
 Taranaki_data_OM_1b <- list()
 Taranaki_data_OM_1b$network <- network
-Taranaki_data_OM_1b$X_gctp <- X_gctp
+Taranaki_data_OM_1b$covariate_df <- covariate_df
 Taranaki_data_OM_1b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_1b)
 
 
@@ -190,37 +194,37 @@ Taranaki_data_OM_1b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_1
 #a.
 Taranaki_data_2a <- list()
 Taranaki_data_2a$network <- network
-Taranaki_data_2a$X_gctp <- X_gctp
+Taranaki_data_2a$covariate_df <- covariate_df
 Taranaki_data_2a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_2a)
 
 #b.
 Taranaki_data_2b <- list()
 Taranaki_data_2b$network <- network
-Taranaki_data_2b$X_gctp <- X_gctp
+Taranaki_data_2b$covariate_df <- covariate_df
 Taranaki_data_2b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_2b)
 
 #c.
 Taranaki_data_2c <- list()
 Taranaki_data_2c$network <- network
-Taranaki_data_2c$X_gctp <- X_gctp
+Taranaki_data_2c$covariate_df <- covariate_df
 Taranaki_data_2c$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_2c)
 
 #d.
 Taranaki_data_2d <- list()
 Taranaki_data_2d$network <- network
-Taranaki_data_2d$X_gctp <- X_gctp
+Taranaki_data_2d$covariate_df <- covariate_df
 Taranaki_data_2d$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_2d)
 
 #OM - a.
 Taranaki_data_OM_2a <- list()
 Taranaki_data_OM_2a$network <- network
-Taranaki_data_OM_2a$X_gctp <- X_gctp
+Taranaki_data_OM_2a$covariate_df <- covariate_df
 Taranaki_data_OM_2a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_2a)
 
 #OM - b.
 Taranaki_data_OM_2b <- list()
 Taranaki_data_OM_2b$network <- network
-Taranaki_data_OM_2b$X_gctp <- X_gctp
+Taranaki_data_OM_2b$covariate_df <- covariate_df
 Taranaki_data_OM_2b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_2b)
 
 
@@ -228,37 +232,37 @@ Taranaki_data_OM_2b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_2
 #a.
 Taranaki_data_3a <- list()
 Taranaki_data_3a$network <- network
-Taranaki_data_3a$X_gctp <- X_gctp
+Taranaki_data_3a$covariate_df <- covariate_df
 Taranaki_data_3a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_3a)
 
 #b.
 Taranaki_data_3b <- list()
 Taranaki_data_3b$network <- network
-Taranaki_data_3b$X_gctp <- X_gctp
+Taranaki_data_3b$covariate_df <- covariate_df
 Taranaki_data_3b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_3b)
 
 #c.
 Taranaki_data_3c <- list()
 Taranaki_data_3c$network <- network
-Taranaki_data_3c$X_gctp <- X_gctp
+Taranaki_data_3c$covariate_df <- covariate_df
 Taranaki_data_3c$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_3c)
 
 #d.
 Taranaki_data_3d <- list()
 Taranaki_data_3d$network <- network
-Taranaki_data_3d$X_gctp <- X_gctp
+Taranaki_data_3d$covariate_df <- covariate_df
 Taranaki_data_3d$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_3d)
 
 #OM - a.
 Taranaki_data_OM_3a <- list()
 Taranaki_data_OM_3a$network <- network
-Taranaki_data_OM_3a$X_gctp <- X_gctp
+Taranaki_data_OM_3a$covariate_df <- covariate_df
 Taranaki_data_OM_3a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_3a)
 
 #OM - b.
 Taranaki_data_OM_3b <- list()
 Taranaki_data_OM_3b$network <- network
-Taranaki_data_OM_3b$X_gctp <- X_gctp
+Taranaki_data_OM_3b$covariate_df <- covariate_df
 Taranaki_data_OM_3b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_3b)
 
 
@@ -266,37 +270,37 @@ Taranaki_data_OM_3b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_3
 #a.
 Taranaki_data_4a <- list()
 Taranaki_data_4a$network <- network
-Taranaki_data_4a$X_gctp <- X_gctp
+Taranaki_data_4a$covariate_df <- covariate_df
 Taranaki_data_4a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_4a)
 
 #b.
 Taranaki_data_4b <- list()
 Taranaki_data_4b$network <- network
-Taranaki_data_4b$X_gctp <- X_gctp
+Taranaki_data_4b$covariate_df <- covariate_df
 Taranaki_data_4b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_4b)
 
 #c.
 Taranaki_data_4c <- list()
 Taranaki_data_4c$network <- network
-Taranaki_data_4c$X_gctp <- X_gctp
+Taranaki_data_4c$covariate_df <- covariate_df
 Taranaki_data_4c$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_4c)
 
 #d.
 Taranaki_data_4d <- list()
 Taranaki_data_4d$network <- network
-Taranaki_data_4d$X_gctp <- X_gctp
+Taranaki_data_4d$covariate_df <- covariate_df
 Taranaki_data_4d$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_4d)
 
 #OM - a.
 Taranaki_data_OM_4a <- list()
 Taranaki_data_OM_4a$network <- network
-Taranaki_data_OM_4a$X_gctp <- X_gctp
+Taranaki_data_OM_4a$covariate_df <- covariate_df
 Taranaki_data_OM_4a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_4a)
 
 #OM - b.
 Taranaki_data_OM_4b <- list()
 Taranaki_data_OM_4b$network <- network
-Taranaki_data_OM_4b$X_gctp <- X_gctp
+Taranaki_data_OM_4b$covariate_df <- covariate_df
 Taranaki_data_OM_4b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_4b)
 
 
@@ -397,60 +401,50 @@ saveRDS(Taranaki_data_OM_4b_with_ds, file=file.path(data_taranaki_dir, "Taranaki
 
 
 
-############################
-# Check habitat data is ok #
-############################
-
-#Check with whole network
-network_check <- Taranaki_data_1a_with_ds$network
-hab_check <- data.frame("Lon"=network_check$Lon, "Lat"=network_check$Lat, 
-                        "Elevation"=Taranaki_data_1a_with_ds$X_gctp[,1,"2022","std_log_loc_elev"])
-
-l1 <- lapply(1:nrow(network_check), function(x){
-  parent <- network_check$parent_s[x]
-  find <- network_check %>% filter(child_s == parent)
-  if(nrow(find)>0) out <- cbind.data.frame(network_check[x,], 'Lon2'=find$Lon, 'Lat2'=find$Lat)
-  if(nrow(find)==0) out <- cbind.data.frame(network_check[x,], 'Lon2'=NA, 'Lat2'=NA)
-  return(out)
-})
-l1 <- do.call(rbind, l1)
-
-catchmap <- ggplot() +
-  geom_point(data=network_check, aes(x = Lon, y = Lat), col="gray") +
-  geom_segment(data=l1, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
-  geom_point(data=hab_check, aes(x = Lon, y = Lat, col=Elevation), alpha=0.6) +
-  scale_fill_brewer(palette = "Set1") +
-  xlab("Longitude") + ylab("Latitude") +
-  ggtitle("Taranaki river network map - Elevation") +
-  theme_bw(base_size = 14)
-ggsave(file.path(fig_dir, "Taranaki_elevation.png"), catchmap)
-
-
-
-
-
-#Check with downstream network
-network_sub <- Taranaki_data_1a_with_ds$network_ds
-hab_sub <- data.frame("Lon"=network_sub$Lon, "Lat"=network_sub$Lat, 
-                      "Elevation"=Taranaki_data_1a_with_ds$X_gctp_ds[,1,"2022","std_log_loc_elev"])
-
-l2 <- lapply(1:nrow(network_sub), function(x){
-  parent <- network_sub$parent_s[x]
-  find <- network_sub %>% filter(child_s == parent)
-  if(nrow(find)>0) out <- cbind.data.frame(network_sub[x,], 'Lon2'=find$Lon, 'Lat2'=find$Lat)
-  if(nrow(find)==0) out <- cbind.data.frame(network_sub[x,], 'Lon2'=NA, 'Lat2'=NA)
-  return(out)
-})
-l2 <- do.call(rbind, l2)
-
-catchmap <- ggplot() +
-  geom_point(data=network_sub, aes(x = Lon, y = Lat), col="gray") +
-  geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
-  geom_point(data=hab_sub, aes(x = Lon, y = Lat, col=Elevation), alpha=0.6) +
-  scale_fill_brewer(palette = "Set1") +
-  xlab("Longitude") + ylab("Latitude") +
-  ggtitle("Taranaki river network map - Elevation") +
-  theme_bw(base_size = 14)
-ggsave(file.path(fig_dir, "Taranaki_elevation_ds.png"), catchmap)
-
-
+# #######################
+# # Plot covariate data #
+# #######################
+# 
+# #Covariates
+# # covariate_names <- c("std_log_loc_elev", #Elevation
+# #                      "std_FWENZ_SegRipShade", #riparian shade
+# #                      "std_log_MeanFlowCumecs", #mean flow in cumecs
+# #                      "std_FWENZ_segSubstrate", #river substrate
+# #                      "std_local_twarm", #average January temperature
+# #                      "std_Years_since_barrier", #years since barrier installed
+# #                      "Barrier_present" #barrier present
+# # )
+# covariate_names <- c("std_Dist2Coast")
+# 
+# for(cov in covariate_names){# cov = "loc_elev"
+#   
+#   data_to_plot <- Taranaki_data_with_ds$covariate_df_ds %>%
+#     mutate("Covariate" = Taranaki_data_with_ds$covariate_df_ds[,cov])
+#   
+#   if(cov %in% c("std_Years_since_barrier", "Barrier_present")){
+#     
+#     catchmap1 <- ggplot(data_to_plot) +
+#       geom_point(aes(x = Lon, y = Lat, col=Covariate), alpha=0.6) +
+#       facet_wrap(~Year) +
+#       scale_colour_distiller(palette = "RdYlGn") +
+#       xlab("Longitude") + ylab("Latitude") +
+#       ggtitle(paste0("Catchment map of ", cov)) + 
+#       #theme_bw(base_size = 14)
+#       theme(axis.text.x=element_text(angle = 90, vjust = 0.5, hjust=1, size=8),
+#             axis.text.y=element_text(size=6))
+#     ggsave(file.path(covariate_plot_dir, paste0("Final_covariate_map_ds - ", cov,".png")), catchmap1)
+#     
+#   }else{
+#     
+#     catchmap2 <- ggplot(data_to_plot) +
+#       geom_point(aes(x = Lon, y = Lat, col=Covariate), alpha=0.6) +
+#       scale_colour_distiller(palette = "RdYlGn") +
+#       xlab("Longitude") + ylab("Latitude") +
+#       ggtitle(paste0("Catchment map of ", cov)) + 
+#       theme_bw(base_size = 14)
+#     ggsave(file.path(covariate_plot_dir, paste0("Final_covariate_map_ds - ", cov,".png")), catchmap2)
+#     
+#   }
+#   
+# }
+# 

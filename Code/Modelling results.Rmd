@@ -29,9 +29,9 @@ scenarios <- c("Structured data only",
               "3a", "3b", "3c", "3d", #3c model failed
               "4a", "4b", "4c", "4d")
 
-pars <- c("L_omega1_z", "L_epsilon1_z", "L_beta_z", "logkappa1", "log_sigmaPhi1_k")
+PA_sample_sizes <- c("NA", rep(c("n", "5n", "10n", "20n"), 4))
 
-model_output_df <- data.frame("Scenario"=scenarios)
+model_output_df <- data.frame("Scenario"=scenarios, "PA_sample_size" = PA_sample_sizes)
 
 
 for(sce in scenarios){
@@ -78,6 +78,11 @@ for(sce in scenarios){
   se_log_sigmaPhi1_k2 <- parameters[rownames(parameters) == "log_sigmaPhi1_k", "Std. Error"][2]
   model_output_df[model_output_df$Scenario == sce, "log_sigmaPhi1_k (Unstructured data)"] <- paste0(signif(par_log_sigmaPhi1_k2, digits=4)," (",signif(se_log_sigmaPhi1_k2, digits=4),")")
   
+  #Gamma has 4 parameters as we use bsplines with 4 d.o.f
+  # par_gamma1_cp <- parameters[rownames(parameters) == "gamma1_cp", "Estimate"]
+  # se_gamma1_cp <- parameters[rownames(parameters) == "gamma1_cp", "Std. Error"]
+  # model_output_df[model_output_df$Scenario == sce, "gamma1_cp"] <- paste0(signif(par_gamma1_cp, digits=4)," (",signif(se_gamma1_cp, digits=4),")")
+  
   
   #Maximum gradient 
   model_output_df[model_output_df$Scenario == sce, "Maximum gradient"] <- signif(parameter_estimates$max_gradient,4)
@@ -94,7 +99,7 @@ kable(model_output_df, caption="Parameter estimates, standard errors, and model 
 
 
 ```{r Cross_validation_table_setup, echo=FALSE}
-CV_table_df <- data.frame("Scenario"=scenarios)
+CV_table_df <- data.frame("Scenario"=scenarios, "PA_sample_size" = PA_sample_sizes)
 
 for(sce in scenarios){
   
@@ -108,22 +113,36 @@ for(sce in scenarios){
     #Load CV results
   load(file.path(path, "CV/CV_results.RData"))
   
-  #Specificity
-  CV_table_df[CV_table_df$Scenario == sce,"Mean Specificity"] <- round(mean(unlist(cv_list$sp)), 2)
-  CV_table_df[CV_table_df$Scenario == sce,"Median (min-max) Specificity"] <- paste0(round(median(unlist(cv_list$sp)), 2), " (", round(min(unlist(cv_list$sp)), 2), "-", round(max(unlist(cv_list$sp)), 2), ")")
+  # #Specificity
+  # CV_table_df[CV_table_df$Scenario == sce,"Mean Specificity"] <- round(mean(unlist(cv_list$sp)), 2)
+  # CV_table_df[CV_table_df$Scenario == sce,"Median (min-max) Specificity"] <- paste0(round(median(unlist(cv_list$sp)), 2), " (", round(min(unlist(cv_list$sp)), 2), "-", round(max(unlist(cv_list$sp)), 2), ")")
+  # 
+  # #Specificity
+  # CV_table_df[CV_table_df$Scenario == sce,"Mean Sensitivity"] <- round(mean(unlist(cv_list$sn)), 2)
+  # CV_table_df[CV_table_df$Scenario == sce,"Median (min-max) Sensitivity"] <- paste0(round(median(unlist(cv_list$sn)), 2), " (", round(min(unlist(cv_list$sn)), 2), "-", round(max(unlist(cv_list$sn)), 2), ")")
   
-  #Specificity
-  CV_table_df[CV_table_df$Scenario == sce,"Mean Sensitivity"] <- round(mean(unlist(cv_list$sn)), 2)
-  CV_table_df[CV_table_df$Scenario == sce,"Median (min-max) Sensitivity"] <- paste0(round(median(unlist(cv_list$sn)), 2), " (", round(min(unlist(cv_list$sn)), 2), "-", round(max(unlist(cv_list$sn)), 2), ")")
+  #Specificity (mean threshold)
+  CV_table_df[CV_table_df$Scenario == sce,"Mean Specificity_thres"] <- round(mean(unlist(cv_list$sp_thres)), 2)
+  CV_table_df[CV_table_df$Scenario == sce,"Median (min-max) Specificity_thres"] <- paste0(round(median(unlist(cv_list$sp_thres)), 2), " (", round(min(unlist(cv_list$sp_thres)), 2), "-", round(max(unlist(cv_list$sp_thres)), 2), ")")
+  
+  #Specificity (mean threshold)
+  CV_table_df[CV_table_df$Scenario == sce,"Mean Sensitivity_thres"] <- round(mean(unlist(cv_list$sn_thres)), 2)
+  CV_table_df[CV_table_df$Scenario == sce,"Median (min-max) Sensitivity_thres"] <- paste0(round(median(unlist(cv_list$sn_thres)), 2), " (", round(min(unlist(cv_list$sn_thres)), 2), "-", round(max(unlist(cv_list$sn_thres)), 2), ")")
   
   #AUC
   CV_table_df[CV_table_df$Scenario == sce,"Mean AUC"] <- round(cv_list$AUC$mean_est, 2)
   CV_table_df[CV_table_df$Scenario == sce,"Median (min-max) AUC"] <- paste0(round(median(cv_list$AUC$estimates), 2), " (",round(min(cv_list$AUC$estimates), 2),"-", round(max(cv_list$AUC$estimates), 2), ")")
   
-  #TSS
-  TSS <- unlist(cv_list$TSS)[names(unlist(cv_list$TSS)) == "TSS"]
-  CV_table_df[CV_table_df$Scenario == sce,"Mean TSS"] <- round(mean(TSS), 2)
-  CV_table_df[CV_table_df$Scenario == sce,"Median (min-max) TSS"] <- paste0(round(median(TSS), 2), " (",round(min(TSS), 2),"-", round(max(TSS), 2), ")")
+  # #TSS (0.5 threshold)
+  # TSS <- unlist(cv_list$TSS)[names(unlist(cv_list$TSS)) == "TSS"]
+  # CV_table_df[CV_table_df$Scenario == sce,"Mean TSS"] <- round(mean(TSS), 2)
+  # CV_table_df[CV_table_df$Scenario == sce,"Median (min-max) TSS"] <- paste0(round(median(TSS), 2), " (",round(min(TSS), 2),"-", round(max(TSS), 2), ")")
+  
+  #TSS (Ave threshold)
+  TSS_thres <- unlist(cv_list$TSS_thres)[names(unlist(cv_list$TSS_thres)) == "TSS"]
+  CV_table_df[CV_table_df$Scenario == sce,"Mean TSS_mean"] <- round(mean(TSS_thres), 2)
+  CV_table_df[CV_table_df$Scenario == sce,"Median (min-max) TSS_mean"] <- paste0(round(median(TSS_thres), 2), " (",round(min(TSS_thres), 2),"-", round(max(TSS_thres), 2), ")")
+  
   }
 
 }

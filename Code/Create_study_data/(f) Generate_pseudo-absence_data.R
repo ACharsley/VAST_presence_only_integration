@@ -55,9 +55,13 @@ years_to_sample <- unique(encounter_only_lf_data$Year)[order(unique(encounter_on
 ##Load habitat suitability data
 load(file.path(HSM_dir, "HSM_encounter_prob.RData"))
 
-##Set unsuitable habitat as anything less than 1st quartile
+# ##Set unsuitable habitat as anything less than 1st quartile
+# summary(HSM_encounter_prob$POE)
+# unsuit_hab_cutoff <- summary(HSM_encounter_prob$POE)["1st Qu."]
+
+##Set unsuitable habitat as anything less than 0.5
 summary(HSM_encounter_prob$POE)
-unsuit_hab_cutoff <- summary(HSM_encounter_prob$POE)["1st Qu."]
+unsuit_hab_cutoff <- 0.5
 
 ##Road data
 NZ_roads_data <- read_sf(dsn = raw_data_dir, layer = "nz-primary-road-parcels") #Data extracted on 14/11/22 from https://data.linz.govt.nz/layer/50796-nz-primary-road-parcels/
@@ -269,11 +273,11 @@ sample_OM_2a <- do.call(rbind, sample_OM_2a)
 sample_OM_2b <- do.call(rbind, sample_OM_2b)
 
 
-#####################################################################
-# 3. Random generation at locations within 2km of a registered road #
-#####################################################################
+#######################################################################
+# 3. Random generation at locations within 500 m of a registered road #
+#######################################################################
 
-#Identify locations that are further than 2km away from a road. This locations will
+#Identify locations that are further than 500 m away from a road. This locations will
 #be excluded from the sampling
 
 #########
@@ -285,6 +289,8 @@ network_to_sample_SF <- st_transform(network_to_sample_SF, 3857) #Ensure I'm usi
 idx <- st_nearest_feature(network_to_sample_SF, NZ_roads_coords)
 network_to_sample_SF$distance_to_road <- st_distance(network_to_sample_SF, NZ_roads_coords[idx,], by_element = TRUE)
 summary(network_to_sample_SF$distance_to_road/1000)
+#  Min.    1st Qu.   Median     Mean  3rd Qu.     Max. 
+# 0.000375 0.203906 0.539856 0.841222 1.122510 8.794301 
 
 #Convert to km and drop units
 network_to_sample_SF$distance_to_road_km <- drop_units(network_to_sample_SF$distance_to_road)/1000
@@ -315,10 +321,13 @@ dist_to_road_presenceonly_hist <- ggplot(presence_only_sample_bias, aes(distance
   ggtitle("Distance to road (km) of unstructured data")
 ggsave(file.path(fig_dir, "Distance_to_road_unstructured_data.png"), dist_to_road_presenceonly_hist, height = 12, width = 15)
 
-dist_cut_off <- summary(presence_only_sample_bias$distance_to_road_km)["3rd Qu."] #0.6573748
+# dist_cut_off <- summary(presence_only_sample_bias$distance_to_road_km)["3rd Qu."] #0.6573748
+summary(presence_only_sample_bias$distance_to_road_km)
+#  Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+# 0.0020  0.1347  0.3503  0.5260  0.6574  3.0661 
 #########
 
-## Extract locations that are further than 2km from a road
+## Extract locations that are further than 500 m from a road
 locations_far_from_roads <- network_to_sample_SF %>%
   filter(distance_to_road_km > 0.5) %>% pull(child_i)
 
@@ -593,13 +602,17 @@ catchmap <- ggplot(Data_to_plot) +
   geom_point(aes(x = Lon, y = Lat, col = Habitat), size=3, alpha = 0.6) +
   
   xlab("Longitude") + ylab("Latitude") +
-  ggtitle("Longfin eel suitable and unsuitable habitat") +
+  #ggtitle("Longfin eel suitable and unsuitable habitat") +
   
-  guides(color = guide_legend(title = "")) +
+  guides(color = guide_legend(title = "", override.aes = list(size=10))) + 
   #scale_colour_manual(values = c("#377EB8", "#E41A1C")) +
   scale_colour_manual(values = c("#39B600", "#E41A1C")) +
   theme_bw(base_size = 14) +
-  theme(axis.text = element_text(size = rel(0.8)))
+  #theme(axis.text = element_text(size = rel(0.8)))
+  theme(axis.text = element_text(size = rel(1.5)),
+        axis.title=element_text(size = rel(1.5),face="bold"),
+        axis.text.x = element_text(angle = 90),
+        legend.text=element_text(size = rel(1.5)))
 
 ggsave(file.path(fig_dir, "Lf_habitat_suitability.png"), catchmap, height = 12, width = 15)
 
@@ -614,11 +627,17 @@ catchmap2 <- ggplot(Data_to_plot2) +
   geom_point(aes(x = Lon, y = Lat, col = round(distance_to_road_km, 2)), size=3, alpha = 0.6) +
   
   xlab("Longitude") + ylab("Latitude") +
-  ggtitle("Distance to nearest road (m)") +
+  #ggtitle("Distance to nearest road (km)") +
   
+  labs(colour = "") +
+  #guides(col = guide_legend(title = "")) + 
   scale_color_distiller(palette = "RdYlGn", limits = c(0,9), direction = 1) +
   theme_bw(base_size = 14) +
-  theme(axis.text = element_text(size = rel(0.8)))
+  #theme(axis.text = element_text(size = rel(0.8)))
+  theme(axis.text = element_text(size = rel(1.5)),
+        axis.title=element_text(size = rel(1.5),face="bold"),
+        axis.text.x = element_text(angle = 90),
+        legend.text=element_text(size = rel(1.5)))
 ggsave(file.path(fig_dir, "Distance_to_road.png"), catchmap2, height = 12, width = 15)
 
 

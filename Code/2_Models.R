@@ -19,6 +19,7 @@ library(VAST)
 library(splines)  # Used to include basis-splines
 #library(effects)  # Used to visualize covariate effects
 library(DHARMa)
+library(plyr)
 
 
 
@@ -27,9 +28,6 @@ library(DHARMa)
 #################
 
 VAST_input_data_dir <- paste0(getwd(), "/Data_processed/VAST_input_data")
-
-model_path <- paste0(getwd(), "/Models")
-dir.create(model_path, showWarnings=F)
 
 
 
@@ -45,14 +43,16 @@ source(paste0(getwd(), "/Code/funcs.R"))
 #  Modelling scenario  #
 ########################
 
-inputArgs <- commandArgs(trailingOnly=TRUE)
+inputArgs <- commandArgs(trailingOnly=TRUE) #inputArgs <- c("HPC", "NA", "SE_off")
 run_command <- inputArgs[1] ; print(run_command)
 rerun <- inputArgs[2] ; print(rerun)
+SE_switch <- inputArgs[3] ; print(SE_switch) #SE_off, SE_on
+
 
 if(!is.na(run_command)){
   
   if(run_command == "HPC"){
-    task_id = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
+    task_id = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID")) #task_id = 10
     
     if(task_id==1){scenario <- "Taranaki data"}
     if(task_id==2){scenario <- "1a"}
@@ -96,9 +96,7 @@ if(!is.na(run_command)){
   # "OM_2a", "OM_2b"
   # "OM_3a", "OM_3b"
   # "OM_4a", "OM_4b"
-  scenario <-   "OM_4a"
-  
-  
+  scenario <-   "1a"
   network_type <- "downstream"
 }
 
@@ -109,6 +107,10 @@ print(scenario) ; print(network_type)
 ##############
 # Model path #
 ##############
+
+#Set model path
+model_path <- paste0(getwd(), "/Models")
+dir.create(model_path, showWarnings=F)
 
 #Set path
 if(scenario == "Taranaki data"){
@@ -127,7 +129,12 @@ if(scenario == "Taranaki data"){
   }
 }
 
-#Create model path
+#If standard errors are being estimated then add to path
+if(SE_switch == "SE_on"){
+  path <- paste0(path, "_SE")
+}
+
+#Create model sub-path
 dir.create(path, showWarnings = FALSE)
 
 path_figs <- file.path(path, "Figures")
@@ -162,46 +169,27 @@ Data_inp <- VAST_input_data[[scenario]]$Data_Geostat
 
 
 # 2. Set covariate input
-
-# X_gctp <- VAST_input_data[[scenario]]$X_gctp
-# X_itp <- VAST_input_data[[scenario]]$X_itp
-# 
-# covars_all <- dimnames(X_gctp)[[4]] ; n_p <- length(covars_all)
-# 
-# X1config_inp <- array(1, dim = c(1,n_p)) 
-# X1config_inp[covars_all == "std_Years_since_barrier"] <- 0 #don't use this variable (temporal variation input through spatio-temporal grid)
-# #using bsplines with 2 degrees of freedom based on the Graynoth & Booker (2009) biomass model
-# X1_formula_inp = X2_formula_inp = ~ bs(std_log_loc_elev, degree = 2, intercept = FALSE ) + 
-#   bs(std_SegRipShade_sqrd, degree = 2, intercept = FALSE ) + bs(std_log_MeanFlowCumecs, degree = 2, intercept = FALSE ) + 
-#   bs(std_FWENZ_segSubstrate, degree = 2, intercept = FALSE ) + bs(std_local_twarm, degree = 2, intercept = FALSE ) + 
-#   bs(std_Years_since_barrier, degree = 2, intercept = FALSE ) + factor(Barrier_present)
-# 
-# #TURN OFF covariates in 2nd predictor
-# X2config_inp <- array(0, dim = c(1,n_p))
-
 covariate_df <- VAST_input_data[[scenario]]$covariate_data
+#covars_all <- colnames(covariate_df)[!(colnames(covariate_df) %in% c("Lon","Lat","Year"))]
 
-covars_all <- colnames(covariate_df)[4:ncol(covariate_df)]
-
-covariate_df <- covariate_df %>%
-  select(c(Year, Lon, Lat, all_of(covars_all[covars_all != "std_Years_since_barrier"])))
-
-#using bsplines with 2 degrees of freedom based on the Graynoth & Booker (2009) biomass model
-# X1_formula_inp = ~ bs(std_log_loc_elev, degree = 2, intercept = FALSE ) + 
-#   bs(std_SegRipShade_sqrd, degree = 2, intercept = FALSE ) + bs(std_log_MeanFlowCumecs, degree = 2, intercept = FALSE ) + 
-#   bs(std_FWENZ_segSubstrate, degree = 2, intercept = FALSE ) + bs(std_local_twarm, degree = 2, intercept = FALSE ) + 
+#Set covariate input
+# X1_formula_inp = ~ bs(std_log_loc_elev, degree = 3, intercept = FALSE ) +
+#   bs(std_FWENZ_SegRipShade, degree = 3, intercept = FALSE ) + bs(std_log_MeanFlowCumecs, degree = 3, intercept = FALSE ) +
+#   bs(std_FWENZ_segSubstrate, degree = 3, intercept = FALSE ) + bs(std_local_twarm, degree = 3, intercept = FALSE ) +
 #   factor(Barrier_present)
-X1_formula_inp = ~ bs(std_log_loc_elev, degree = 3, intercept = FALSE ) + 
-  bs(std_SegRipShade_sqrd, degree = 3, intercept = FALSE ) + bs(std_log_MeanFlowCumecs, degree = 3, intercept = FALSE ) + 
-  bs(std_FWENZ_segSubstrate, degree = 3, intercept = FALSE ) + bs(std_local_twarm, degree = 3, intercept = FALSE ) + 
-  factor(Barrier_present)
-X2_formula_inp = ~0
-
-# if(!is.na(rerun)){
-#   #If re-run command is specified then overwrite
-#   #X1_formula_inp = ~ 0
-#   X1_formula_inp = paste0("~", paste0(covars_all[!(covars_all %in% c("std_Years_since_barrier", "Barrier_present"))], collapse = "+"), " + factor(Barrier_present)")
+# X1_formula_inp = ~ bs(std_log_loc_elev, degree = 2, intercept = FALSE ) +
+#   bs(std_FWENZ_SegRipShade, degree = 2, intercept = FALSE ) + bs(std_log_MeanFlowCumecs, degree = 2, intercept = FALSE ) +
+#   bs(std_FWENZ_segSubstrate, degree = 2, intercept = FALSE ) + bs(std_local_twarm, degree = 2, intercept = FALSE ) +
+#   factor(Barrier_present)
+#
+# if(scenario == "Taranaki data" & rerun == "rerun"){
+#   
+#   #Not using bsplines because I'm struggling to get this model to fit
+#   X1_formula_inp = "~ std_log_loc_elev+std_FWENZ_SegRipShade+std_log_MeanFlowCumecs+std_FWENZ_segSubstrate+std_local_twarm+factor(Barrier_present)"
+#   
 # }
+X1_formula_inp = ~ bs(std_Dist2Coast, degree = 4, intercept = FALSE )
+X2_formula_inp = ~0
 
 
 # 3. Set up catchability input
@@ -235,13 +223,25 @@ FieldConfig <- c("Omega1" = 1, "Epsilon1" = 1, "Omega2" = 0, "Epsilon2" = 0) #1 
 RhoConfig <- c("Beta1" = 2, "Beta2" = 3, "Epsilon1" = 1, "Epsilon2" = 0) #Remove RhoConfig[3] if necessary
 
 if(!is.na(rerun)){
-  RhoConfig <- c("Beta1" = 2, "Beta2" = 3, "Epsilon1" = 0, "Epsilon2" = 0)
+  if(rerun == "rerun"){ #Remove spatio-temporal variation
+    RhoConfig <- c("Beta1" = 2, "Beta2" = 3, "Epsilon1" = 0, "Epsilon2" = 0) 
+  }
   }
 
 
 ObsModel <- c(2,0)
 OverdispersionConfig <- c("Eta1" = 0, "Eta2" = 0)
-Options <- c("Calculate_range" = 1, "Calculate_effective_area" = 1)
+
+if(SE_switch == "SE_off"){
+  Options <- c("Calculate_range" = 1, "Calculate_effective_area" = 1) #Initially build without SEs for testing
+}else{
+  if(SE_switch == "SE_on"){
+    Options <- c("SD_site_density" = 1, "Calculate_range" = 1, "Calculate_effective_area" = 1)
+  }else{
+    stop("SE_switch needs to be specified")
+  }
+  }
+
 
 if(network_type == "downstream"){
   bias_correct = F
@@ -389,7 +389,7 @@ Opt = TMBhelper::fit_tmb(obj = Obj,
                          getsd = TRUE, 
                          savedir = path, 
                          bias.correct = bias_correct, 
-                         newtonsteps = 1, 
+                         newtonsteps = 3, 
                          bias.correct.control = bias_correct_control, 
                          getJointPrecision = TRUE) 
 Report = Obj$report()
@@ -568,6 +568,151 @@ plot_maps_network(plot_set = c(1),
                   arrows=T, 
                   pch=15)
 
+
+# Without titles and with zlimit changed
+print(summary(Fit$Report$R1_gct))
+
+zlim_inp <- c(0, round_any(max(Fit$Report$R1_gct), 0.1, f=ceiling))
+
+## Yearly
+plot_maps_network(plot_set = c(1), 
+                  fit = Fit, 
+                  Sdreport = Fit$parameter_estimates$SD, 
+                  TmbData = Fit$data_list, 
+                  spatial_list = Fit$spatial_list, 
+                  DirName = path_figs, 
+                  Panel = "category", 
+                  PlotName = "POE_lf_yearly_v2",
+                  PlotTitle = "",
+                  cex = 0.5, 
+                  Zlim = zlim_inp, 
+                  arrows=T, 
+                  pch=15)
+
+
+## Across time
+plot_maps_network(plot_set = c(1), 
+                  fit = Fit, 
+                  Sdreport = Fit$parameter_estimates$SD, 
+                  TmbData = Fit$data_list, 
+                  spatial_list = Fit$spatial_list, 
+                  DirName = path_figs, 
+                  Panel = "Year", 
+                  PlotName = "POE_lf_v2",
+                  PlotTitle = "",
+                  cex = 0.75, 
+                  Zlim = zlim_inp, 
+                  arrows=T, 
+                  pch=15)
+
+
+#####################
+# Uncertainty plots #
+#####################
+if(SE_switch == "SE_on"){
+  
+  #For river tracing in plot
+  Network_sz_EN <- data.frame('parent_s'=Fit$data_list$parent_s, 'child_s'=Fit$data_list$child_s, Fit$spatial_list$latlon_g)
+  l2 <- lapply(1:nrow(Network_sz_EN), function(x){
+    parent <- Network_sz_EN$parent_s[x]
+    find <- Network_sz_EN %>% filter(child_s == parent)
+    if(nrow(find)>0) out <- cbind.data.frame(Network_sz_EN[x,], 'long2'=find$Lon, 'lat2'=find$Lat)
+    if(nrow(find)==0) out <- cbind.data.frame(Network_sz_EN[x,], 'long2'=NA, 'lat2'=NA)
+    return(out)
+  })
+  l2 <- do.call(rbind, l2)
+  
+  
+  ### Extract SE information ###
+  Sdreport = Fit$parameter_estimates$SD
+  
+  Index_SE <- array( TMB::summary.sdreport( Sdreport )[which( 
+    rownames( TMB::summary.sdreport( Sdreport ) ) == "Index_gctl" ),2], 
+    dim = c( dim( Report$Index_gctl ) ), dimnames = list( NULL, NULL, NULL, NULL ) )[,1,,]
+  
+  #Convert to POC
+  POC_SE <- Index_SE/(Fit$spatial_list$a_gl[,1]) #This gives SE of density, as R2 is all 1, density = probability of encounter in model
+  #all(Fit$Report$R1_gct == Fit$Report$D_gct)
+  
+  save(POC_SE, file = file.path(path, "POC_SE.RData"))
+  #load(file.path(path, "POC_SE.RData"))
+  
+  POC_CV <- POC_SE/Probability_of_encounter
+  
+  ## Uncertainty in probability of encounter plots - Standard error ##
+  SE_xct <- lapply(1:length(Fit$year_labels), function(x){
+    out <- data.frame('value'=POC_SE[,x], 'year'=Fit$year_labels[x], Fit$spatial_list$latlon_g)
+    return(out)
+  })
+  SE_xct <- do.call(rbind, SE_xct)
+  
+  #Set so only complete cases are plotted (no NAs) - NAs produced in root nodes
+  SE_xct <- SE_xct[complete.cases(SE_xct),]
+  
+  #Set limits for plotting
+  zlim_inp1 <- c(0, round_any(max(SE_xct$value), 0.1, f=ceiling))
+  Xlim = c(min(SE_xct$Lon),max(SE_xct$Lon))
+  Ylim = c(min(SE_xct$Lat),max(SE_xct$Lat))
+  
+  ## Yearly
+  p <- ggplot(SE_xct)
+  p <- p + geom_segment(data=l2, aes(x = Lon,y = Lat, xend = long2, yend = lat2), col="gray92")
+  
+  p <- p +
+    geom_point(aes(x = Lon, y = Lat, color = value), cex = 0.5, pch = 19) +
+    scale_color_distiller(palette = "RdYlGn", limits = zlim_inp1) + #, direction = 1) +
+    coord_cartesian(xlim = Xlim, ylim = Ylim) +
+    scale_x_continuous(breaks=quantile(SE_xct$Lon, prob=c(0.1,0.5,0.9)), labels=round(quantile(SE_xct$Lon, prob=c(0.1,0.5,0.9)),0)) +
+    # guides(color=guide_legend(title=plot_codes[plot_num])) +
+    facet_wrap(~year) + 
+    mytheme() +
+    xlab("Longitude") + ylab("Latitude")
+  
+  #Save without title
+  ggsave(file.path(path_figs, "POE_SE_lf_yearly_v2.png"), p, width=8,height=8)
+  
+  #Save with title
+  p <- p + ggtitle(wrapper("Longfin eel yearly SE in probability of encounter in Taranaki, NZ", width = 50))
+  ggsave(file.path(path_figs, "POE_SE_lf_yearly.png"), p, width=8,height=8)
+  
+  
+  ## Uncertainty in probability of encounter plots - Standard error ##
+  CV_xct <- lapply(1:length(Fit$year_labels), function(x){
+    out <- data.frame('value'=POC_CV[,x], 'year'=Fit$year_labels[x], Fit$spatial_list$latlon_g)
+    return(out)
+  })
+  CV_xct <- do.call(rbind, CV_xct)
+  
+  #Set so only complete cases are plotted (no NAs) - NAs produced in root nodes
+  CV_xct <- CV_xct[complete.cases(CV_xct),]
+  
+  #Set limits for plotting
+  zlim_inp2 <- c(floor(min(CV_xct$value)),ceiling(max(CV_xct$value)))
+  Xlim = c(min(CV_xct$Lon),max(CV_xct$Lon))
+  Ylim = c(min(CV_xct$Lat),max(CV_xct$Lat))
+  
+  ## Yearly
+  p <- ggplot(CV_xct)
+  p <- p + geom_segment(data=l2, aes(x = Lon,y = Lat, xend = long2, yend = lat2), col="gray92")
+  
+  p <- p +
+    geom_point(aes(x = Lon, y = Lat, color = value), cex = 0.5, pch = 19) +
+    scale_color_distiller(palette = "RdYlGn", limits = zlim_inp2) + #, direction = 1) +
+    coord_cartesian(xlim = Xlim, ylim = Ylim) +
+    scale_x_continuous(breaks=quantile(CV_xct$Lon, prob=c(0.1,0.5,0.9)), labels=round(quantile(CV_xct$Lon, prob=c(0.1,0.5,0.9)),0)) +
+    # guides(color=guide_legend(title=plot_codes[plot_num])) +
+    facet_wrap(~year) + 
+    mytheme() +
+    xlab("Longitude") + ylab("Latitude")
+  
+  #Save without title
+  ggsave(file.path(path_figs, "POE_CV_lf_yearly_v2.png"), p, width=8,height=8)
+  
+  #Save with title
+  p <- p + ggtitle(wrapper("Longfin eel yearly coefficient of variation (CV) in probability of encounter in Taranaki, NZ", width = 50))
+  ggsave(file.path(path_figs, "POE_CV_lf_yearly.png"), p, width=8,height=8)
+  
+}
 
 
 #######################################

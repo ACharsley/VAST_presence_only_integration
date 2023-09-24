@@ -70,6 +70,19 @@ NZFFD$Year <- as.numeric(substr(NZFFD$eventDate, start = 1, stop = 4))
 NZFFD <- NZFFD %>% relocate(Year, .after = nzffdRecordNumber)
 NZFFD <- NZFFD[-(which(is.na(NZFFD$Year))),]
 
+#Investigating months vs years:
+#as.numeric(substr(NZFFD$eventDate, start = 6, stop = 7))
+#summary(as.numeric(substr(NZFFD$eventDate, start = 6, stop = 7)))
+# Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+#   1.000   2.000   4.000   5.652   9.000  12.000    1030 
+
+# summary(as.numeric(substr(NZFFD$eventDate, start = 1, stop = 4)))
+# Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+#    1901    1998    2007    2005    2015    2022      57 
+
+## There is more data for year than month, but month is still viable... need to look at final data set
+
+
 #Rename recsegment variable
 NZFFD <- NZFFD %>% rename("nzsegment" = "recSegment")
 
@@ -341,123 +354,123 @@ saveRDS(NZFFD_eo, file.path(data_taranaki_dir, "Taranaki_encounter_only_lf_data.
 # write.csv(NZFFD_abund_TRC_lf, row.names = F, file = file.path(data_taranaki_dir, "Taranaki_NZFFD_abund_data.csv"))
 
 
-###################
-# Plot e/n-e data #
-###################
-
-Data_to_plot <- NZFFD_ene
-Data_to_plot$encounter <- ifelse(round(Data_to_plot$`Anguilla dieffenbachii`)==1, "Encounter", "Non-encounter")
-
-#Taranaki network by year
-tab <- table(Data_to_plot$encounter, Data_to_plot$Year)
-years <- unique(Data_to_plot$Year)[order(unique(Data_to_plot$Year))]
-data_text <- data.frame("Year"= years, label=paste0(tab[1,], "/", tab[2,]),
-                        x=174, y=-39.8)
-
-
-catchmap <- ggplot(Data_to_plot) +
-  geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-  geom_point(aes(x = Lon, y = Lat, col = encounter), alpha = 0.6) +
-  facet_wrap(.~Year) +
-  xlab("Longitude") + ylab("Latitude") +
-  ggtitle("Longfin eel NZFFD encounter/non-encounter observations by year") +
-  guides(color = guide_legend(title = "")) +
-  scale_colour_manual(values = c("#E41A1C", "#377EB8")) +
-  theme_bw(base_size = 14) +
-  theme(axis.text = element_text(size = rel(0.5)),
-        axis.text.x = element_text(angle = 90))
-
-catchmap <- catchmap +geom_text(
-  data = data_text,
-  mapping = aes(x = x, y = y, label = label)
-)
-
-ggsave(file.path(fig_dir, "Taranaki_lf_observations_byYear.png"), catchmap, height = 12, width = 15)
-
-
-###################################################
-
-# Taranaki catchment
-
-l2 <- lapply(1:nrow(network), function(x){
-  parent <- network$parent_s[x]
-  find <- network %>% filter(child_s == parent)
-  if(nrow(find)>0) out <- cbind.data.frame(network[x,], 'Lon2'=find$Lon, 'Lat2'=find$Lat)
-  if(nrow(find)==0) out <- cbind.data.frame(network[x,], 'Lon2'=NA, 'Lat2'=NA)
-  
-  return(out)
-})
-l2 <- do.call(rbind, l2)
-
-
-catchmap2 <- ggplot(Data_to_plot) +
-  geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-  geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
-  geom_point(aes(x = Lon, y = Lat, col = encounter), size=3, alpha = 0.6) +
-  xlab("Longitude") + ylab("Latitude") +
-  ggtitle("Longfin eel NZFFD encounter/non-encounter observations") +
-  guides(color = guide_legend(title = "")) +
-  scale_colour_manual(values = c("#E41A1C", "#377EB8")) +
-  theme_bw(base_size = 14) +
-  theme(axis.text = element_text(size = rel(0.8)))
-
-ggsave(file.path(fig_dir, "Taranaki_lf_observations.png"), catchmap2, height = 12, width = 15)
-
-
-
-############################
-# Plot encounter-only data #
-############################
-
-Data_to_plot_eo <- NZFFD_eo
-Data_to_plot_eo$present <- ifelse(round(Data_to_plot_eo$`Anguilla dieffenbachii`)==1, "Encounter", "Non-encounter")
-
-#Load network data
-network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
-
-#Taranaki network by year
-tab <- table(Data_to_plot_eo$present, Data_to_plot_eo$Year)
-years <- unique(Data_to_plot_eo$Year)[order(unique(Data_to_plot_eo$Year))]
-data_text <- data.frame("Year"= years, label=tab[1,],
-                        x=174, y=-39.8)
-
-
-catchmap <- ggplot(Data_to_plot_eo) +
-  geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-  geom_point(aes(x = Lon, y = Lat, col = present), alpha = 0.6) +
-  facet_wrap(.~Year) +
-  xlab("Longitude") + ylab("Latitude") +
-  ggtitle("Longfin eel NZFFD encounter-only observations by year") +
-  guides(color = guide_legend(title = "")) +
-  scale_colour_manual(values = "#E41A1C") +
-  theme_bw(base_size = 14) +
-  theme(axis.text = element_text(size = rel(0.5)),
-        axis.text.x = element_text(angle = 90))
-
-catchmap <- catchmap +geom_text(
-  data = data_text,
-  mapping = aes(x = x, y = y, label = label)
-)
-
-ggsave(file.path(fig_dir, "Taranaki_encounter_only_observations_byYear.png"), catchmap, height = 12, width = 15)
-
-
-###################################################
-
-# Taranaki catchment
-
-catchmap2 <- ggplot(Data_to_plot_eo) +
-  geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-  geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
-  geom_point(aes(x = Lon, y = Lat, col = present), size=3, alpha = 0.6) +
-  xlab("Longitude") + ylab("Latitude") +
-  ggtitle("Longfin eel NZFFD encounter-only observations") +
-  guides(color = guide_legend(title = "")) +
-  scale_colour_manual(values = "#E41A1C") +
-  theme_bw(base_size = 14) +
-  theme(axis.text = element_text(size = rel(0.8)))
-
-ggsave(file.path(fig_dir, "Taranaki_encounter_only_observations.png"), catchmap2, height = 12, width = 15)
+# ###################
+# # Plot e/n-e data #
+# ###################
+# 
+# Data_to_plot <- NZFFD_ene
+# Data_to_plot$encounter <- ifelse(round(Data_to_plot$`Anguilla dieffenbachii`)==1, "Encounter", "Non-encounter")
+# 
+# #Taranaki network by year
+# tab <- table(Data_to_plot$encounter, Data_to_plot$Year)
+# years <- unique(Data_to_plot$Year)[order(unique(Data_to_plot$Year))]
+# data_text <- data.frame("Year"= years, label=paste0(tab[1,], "/", tab[2,]),
+#                         x=174, y=-39.8)
+# 
+# 
+# catchmap <- ggplot(Data_to_plot) +
+#   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
+#   geom_point(aes(x = Lon, y = Lat, col = encounter), alpha = 0.6) +
+#   facet_wrap(.~Year) +
+#   xlab("Longitude") + ylab("Latitude") +
+#   ggtitle("Longfin eel NZFFD encounter/non-encounter observations by year") +
+#   guides(color = guide_legend(title = "")) +
+#   scale_colour_manual(values = c("#E41A1C", "#377EB8")) +
+#   theme_bw(base_size = 14) +
+#   theme(axis.text = element_text(size = rel(0.5)),
+#         axis.text.x = element_text(angle = 90))
+# 
+# catchmap <- catchmap +geom_text(
+#   data = data_text,
+#   mapping = aes(x = x, y = y, label = label)
+# )
+# 
+# ggsave(file.path(fig_dir, "Taranaki_lf_observations_byYear.png"), catchmap, height = 12, width = 15)
+# 
+# 
+# ###################################################
+# 
+# # Taranaki catchment
+# 
+# l2 <- lapply(1:nrow(network), function(x){
+#   parent <- network$parent_s[x]
+#   find <- network %>% filter(child_s == parent)
+#   if(nrow(find)>0) out <- cbind.data.frame(network[x,], 'Lon2'=find$Lon, 'Lat2'=find$Lat)
+#   if(nrow(find)==0) out <- cbind.data.frame(network[x,], 'Lon2'=NA, 'Lat2'=NA)
+#   
+#   return(out)
+# })
+# l2 <- do.call(rbind, l2)
+# 
+# 
+# catchmap2 <- ggplot(Data_to_plot) +
+#   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
+#   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
+#   geom_point(aes(x = Lon, y = Lat, col = encounter), size=3, alpha = 0.6) +
+#   xlab("Longitude") + ylab("Latitude") +
+#   ggtitle("Longfin eel NZFFD encounter/non-encounter observations") +
+#   guides(color = guide_legend(title = "")) +
+#   scale_colour_manual(values = c("#E41A1C", "#377EB8")) +
+#   theme_bw(base_size = 14) +
+#   theme(axis.text = element_text(size = rel(0.8)))
+# 
+# ggsave(file.path(fig_dir, "Taranaki_lf_observations.png"), catchmap2, height = 12, width = 15)
+# 
+# 
+# 
+# ############################
+# # Plot encounter-only data #
+# ############################
+# 
+# Data_to_plot_eo <- NZFFD_eo
+# Data_to_plot_eo$present <- ifelse(round(Data_to_plot_eo$`Anguilla dieffenbachii`)==1, "Encounter", "Non-encounter")
+# 
+# #Load network data
+# network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
+# 
+# #Taranaki network by year
+# tab <- table(Data_to_plot_eo$present, Data_to_plot_eo$Year)
+# years <- unique(Data_to_plot_eo$Year)[order(unique(Data_to_plot_eo$Year))]
+# data_text <- data.frame("Year"= years, label=tab[1,],
+#                         x=174, y=-39.8)
+# 
+# 
+# catchmap <- ggplot(Data_to_plot_eo) +
+#   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
+#   geom_point(aes(x = Lon, y = Lat, col = present), alpha = 0.6) +
+#   facet_wrap(.~Year) +
+#   xlab("Longitude") + ylab("Latitude") +
+#   ggtitle("Longfin eel NZFFD encounter-only observations by year") +
+#   guides(color = guide_legend(title = "")) +
+#   scale_colour_manual(values = "#E41A1C") +
+#   theme_bw(base_size = 14) +
+#   theme(axis.text = element_text(size = rel(0.5)),
+#         axis.text.x = element_text(angle = 90))
+# 
+# catchmap <- catchmap +geom_text(
+#   data = data_text,
+#   mapping = aes(x = x, y = y, label = label)
+# )
+# 
+# ggsave(file.path(fig_dir, "Taranaki_encounter_only_observations_byYear.png"), catchmap, height = 12, width = 15)
+# 
+# 
+# ###################################################
+# 
+# # Taranaki catchment
+# 
+# catchmap2 <- ggplot(Data_to_plot_eo) +
+#   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
+#   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
+#   geom_point(aes(x = Lon, y = Lat, col = present), size=3, alpha = 0.6) +
+#   xlab("Longitude") + ylab("Latitude") +
+#   ggtitle("Longfin eel NZFFD encounter-only observations") +
+#   guides(color = guide_legend(title = "")) +
+#   scale_colour_manual(values = "#E41A1C") +
+#   theme_bw(base_size = 14) +
+#   theme(axis.text = element_text(size = rel(0.8)))
+# 
+# ggsave(file.path(fig_dir, "Taranaki_encounter_only_observations.png"), catchmap2, height = 12, width = 15)
 
 
 

@@ -11,22 +11,22 @@
 
 cd /nesi/nobackup/niwa03825/ACharsley/VAST_presence_only_integration
 
-nano VAST_ff_modelling.sl
+nano VAST_ffmod_SEon.sl
 
 ######## In sl script write the following:
 
 
 #!/bin/bash -e
-#SBATCH --job-name=VAST_ff_modelling # job name (shows up in the queue)
-#SBATCH --account=niwa03825  #niwa03825 (Toitu Nga Taonga Waimaori) or niwa03347 (Population modelling group)
-#SBATCH --time=5:00:00      # Walltime (HH:MM:SS)
+#SBATCH --job-name=VAST_ffmod_SEon # job name (shows up in the queue)
+#SBATCH --account=niwa03347  #niwa03825 (Toitu Nga Taonga Waimaori) or niwa03347 (Population modelling group)
+#SBATCH --time=168:00:00      # Walltime (HH:MM:SS)
 #SBATCH --mem=32000MB          # Memory in MB - trying 100 GB at first
-#SBATCH --cpus-per-task=6                # test using 2 then 4 and see if the speed increases, if not R
+#SBATCH --cpus-per-task=4                # test using 2 then 4 and see if the speed increases, if not R
 #SBATCH --mail-user=Anthony.Charsley@niwa.co.nz
 #SBATCH --mail-type=ALL
-#SBATCH --output=VAST_ff_modelling_%a.%j.out # Include the job ID in the names of
-#SBATCH --error=VAST_ff_modelling_%a.%j.err # the output and error files
-#SBATCH --array=1-25                     # Array jobs
+#SBATCH --output=VAST_ffmod_SEon_%a.%j.out # Include the job ID in the names of
+#SBATCH --error=VAST_ffmod_SEon_%a.%j.err # the output and error files
+#SBATCH --array=1-4,6,7,10-12,14-16                     # Array jobs
 
 
 taskset -c -p $$          #Prints which CPUs it can use
@@ -40,13 +40,13 @@ module load  R-Geo/4.2.1-gimkl-2022a
 # Help R to flush errors and show overall job progress by printing
 # "executing" and "finished" statements.
 echo "Executing R ..."
-srun Rscript /nesi/nobackup/niwa03825/ACharsley/VAST_presence_only_integration/Code/2_Models.R "HPC"
+srun Rscript /nesi/nobackup/niwa03825/ACharsley/VAST_presence_only_integration/Code/2_Models.R "HPC" "NA" "SE_on"
 echo "R finished."
 
 
-############## Press ctrl+x and save as VAST_ff_modelling.sl
+############## Press ctrl+x and save as VAST_ffmod_SEon.sl
 
-sbatch VAST_ff_modelling.sl
+sbatch VAST_ffmod_SEon.sl
 
 ###### Check queue
 

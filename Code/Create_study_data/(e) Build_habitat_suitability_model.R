@@ -35,9 +35,12 @@ dir.create(model_dir, showWarnings=FALSE)
 
 ##NZFFD presence/absence data
 NZFFD_data <- readRDS(file.path(data_taranaki_dir, "Taranaki_NZFFD_ene_data.rds"))
+NZFFD_data$FishMethod <- ifelse(NZFFD_data$FishMethod == "Electric fishing", "Electric fishing", "NetTrap")
+NZFFD_data$FishMethod <- as.factor(NZFFD_data$FishMethod)
 
 ##Habitat data
-load(file.path(data_taranaki_dir, "Taranaki_X_gctp.RData"))
+#load(file.path(data_taranaki_dir, "Taranaki_X_gctp.RData"))
+load(file.path(data_taranaki_dir, "Covariate_data.RData"))
 
 ##Network
 network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
@@ -55,38 +58,63 @@ setwd(model_dir)
 ########################
 
 #Presence/absence data
-PA_data <- NZFFD_data[,"Anguilla dieffenbachii"]
+PA_data <- NZFFD_data %>%  
+  select(c("Anguilla dieffenbachii")) %>% 
+  pull()
 
 #Coordinates
 coords <- as.matrix(NZFFD_data[,c("Lat","Lon")])
 
 #Covariates
-covariate_names <- c("std_log_loc_elev", #Elevation
-                     "std_SegRipShade_sqrd", #riparian shade
-                     "std_log_MeanFlowCumecs", #mean flow in cumecs
-                     "std_FWENZ_segSubstrate", #river substrate
-                     "std_local_twarm", #average January temperature
-                     "std_Years_since_barrier" #years since a barrier was installed
-                     )
+# covariate_names <- c("std_Dist2Coast", #Distance to coast
+#                      "std_log_seg_ro_mm", #Segment rain
+#                      "std_FWENZ_SegRipShade", #riparian shade
+#                      "std_log_MeanFlowCumecs", #mean flow in cumecs
+#                      "std_FWENZ_segSubstrate", #river substrate
+#                      "std_local_twarm", #average January temperature
+#                      "Barrier_present" #barrier present
+# )
 
-hab_data <- X_gctp[NZFFD_data$child_i,,"2022",covariate_names]
-hab_data <- data.frame(hab_data)
+#Only using distance to coast as identified in (d)
+covariate_names <- c("std_Dist2Coast")
 
-#Add catchability data here:
-hab_data <- cbind(hab_data, "FishMethod" = NZFFD_data$FishMethod) #hab_data is ordered by NZFFD_data$child_i, so can simply attach
+#hab_data <- X_gctp[NZFFD_data$child_i,,"2022",covariate_names]
+#hab_data <- data.frame(hab_data)
+
+hab_data <- covariate_df %>% select("Lat","Lon","Year",all_of(covariate_names))
+#hab_data$Barrier_present <- factor(hab_data$Barrier_present)
+
+# #Add NZFFD data with catchability data and therefore restrict hab data to that cooresponding to NZFFD data:
+hab_data <- right_join(hab_data, NZFFD_data[,c("Lat","Lon","Year","FishMethod")])
+
+
+summary(hab_data) #no missing
+
+#Remove lat, long, year
+hab_data <- hab_data %>% select(-c("Lat","Lon","Year"))
 
 
 #Data set to make projections on to
-pred_data <- X_gctp[network$child_s,,"2022",covariate_names]
-pred_data <- data.frame(pred_data)
+pred_data <- covariate_df %>%
+  filter(Year == 2022) %>%
+  select(all_of(covariate_names)) %>%
+  mutate("FishMethod" = factor("Electric fishing"))
 
-#Will make predictions assuming electric fishing was conducted across the catchment
-pred_data <- cbind(pred_data, "FishMethod" = "Electric fishing")
+#pred_data$Barrier_present <- factor(pred_data$Barrier_present)
 
-pred_coords <- network[,c("Lat","Lon")]
+pred_coords <- covariate_df %>%
+  filter(Year == 2022) %>%
+  select("Lat","Lon")
 
 
 
+
+# ## NOTE FishMethod couldn't be fit, so now removing from models ##
+# ## Looks like not enough levels in some cases to perform model validation
+# ## I get the error: Error in { : task 3 failed - "contrasts can be applied only to factors with 2 or more levels"
+# hab_data <- hab_data %>% select(-c("FishMethod"))
+# pred_data <- pred_data %>% select(-c("FishMethod"))
+####
 
 myBiomodData <- BIOMOD_FormatingData(resp.var = PA_data,
                                      expl.var = hab_data, 
@@ -97,8 +125,9 @@ myBiomodData
 plot(myBiomodData)
 
 # Create default modeling options
-myBiomodOptions <- BIOMOD_ModelingOptions(GAM = list(k = 3)) #Change k as error occurs when k=-1
-myBiomodOptions
+#myBiomodOptions <- BIOMOD_ModelingOptions(GAM = list(k = 3)) #Change k as error occurs when k=-1
+#myBiomodOptions <- BIOMOD_ModelingOptions() #Change k as error occurs when k=-1
+#myBiomodOptions
 #Print_Default_ModelingOptions()
 
 # ####################################
@@ -118,14 +147,23 @@ myBiomodOptions
 
 set.seed(280223)
 #Can take a few mins when using 10-fold CV
-myBiomodModelOut <- BIOMOD_Modeling(data = myBiomodData,
-                                    models = c("GLM", "GAM", "ANN", 
-                                               "MARS", "RF", "MAXENT.Phillips"),
-                                    models.options = myBiomodOptions #, DataSplitTable = myBiomodCV
-                                    )
+# myBiomodModelOut <- BIOMOD_Modeling(data = myBiomodData,
+#                                     models = c("GLM", "GAM", "ANN", 
+#                                                "MARS", "RF", "MAXENT.Phillips"),
+#                                     models.options = myBiomodOptions #, DataSplitTable = myBiomodCV
+#                                     )
 # won't use GBM, SRE and MAXENT.Phillips.2 as they can't use factor variables. 
 #Flexible Discriminant Analysis (FDA) model fails to make projections, so removed.
 #Classification tree analysis (CTA) model makes strange predictions (same across the catchment), so removed.
+
+myBiomodModelOut <- BIOMOD_Modeling(bm.format = myBiomodData,
+                                    models = c("GLM", "GAM", "ANN", 
+                                               "MARS", "RF", "MAXENT.Phillips",
+                                               "FDA", "CTA"),
+                                    CV.strategy = "random",
+                                    CV.perc = 0.8
+                                    #models.options = myBiomodOptions #, DataSplitTable = myBiomodCV
+)
 
 myBiomodModelOut
 
@@ -139,29 +177,31 @@ myBiomodModelOut
 
 
 # Project models
-myBiomodProj <- BIOMOD_Projection(modeling.output = myBiomodModelOut,
+myBiomodProj <- BIOMOD_Projection(bm.mod = myBiomodModelOut,
                                   proj.name = 'Habitat_suitability',
                                   new.env = pred_data,
-                                  xy.new.env = pred_coords#, binary.meth = "TSS"
-                                  )
+                                  new.env.xy = pred_coords#, binary.meth = "TSS"
+)
 myBiomodProj
 
 #evaluate projections
 plot(myBiomodProj) 
-#View(myBiomodProj@proj@val[,,1,1]/1000) 
-summary((myBiomodProj@proj@val[,,1,1]/1000)) #NOTE: SRE predictions are binary
+# View(myBiomodProj@proj.out@val)
 
 # Ensemble predictions
 ensemblemod <- BIOMOD_EnsembleModeling(myBiomodModelOut,
-                                       eval.metric = c('TSS'))
+                                       metric.eval = c("KAPPA", 'TSS', "ROC"))
 
-ensembleproj <- BIOMOD_EnsembleForecasting(ensemblemod, 
-                                           projection.output = myBiomodProj)
+ensembleproj <- BIOMOD_EnsembleForecasting(bm.em = ensemblemod, 
+                                           bm.proj = myBiomodProj)
 
-#Set encounter probabilities and save
-HSM_encounter_prob <- data.frame("POE" = as.vector(ensembleproj@proj@val/1000), 
-                                 "Lat" = ensembleproj@xy.coord[,"Lat"], 
-                                 "Lon" = ensembleproj@xy.coord[,"Lon"])
+
+#View(ensembleproj@proj.out@val[ensembleproj@proj.out@val$filtered.by=="ROC",])
+
+#Set encounter probabilities and save. NOTE: will keep the predictions from metric ROC
+HSM_encounter_prob <- data.frame("POE" = as.vector(ensembleproj@proj.out@val[ensembleproj@proj.out@val$filtered.by=="ROC","pred"]/1000), 
+                                 "Lat" = ensembleproj@coord$Lat, 
+                                 "Lon" = ensembleproj@coord$Lon)
 
 #Join back to network
 network_to_join <- network %>% select(nzsegment, Lat, Lon, parent_s, child_s, dist_s)

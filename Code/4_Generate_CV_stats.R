@@ -79,14 +79,27 @@ source(paste0(getwd(), "/Code/funcs.R"))
 #   network_type <- "downstream"
 # }
 
-sce <- c("Taranaki data",
-              "1a", "1b", "1c", 
-         #"1d",  #This model failed
-              "2a", "2b", "2c", "2d",
-              "3a", "3b", 
-         #"3c",  #This model failed
-         "3d",
-              "4a", "4b", "4c", "4d")
+# sce <- c("Taranaki data",
+#               "1a", "1b", "1c", 
+#          #"1d",  #This model failed
+#               "2a", "2b", "2c", "2d",
+#               "3a", "3b", 
+#          #"3c",  #This model failed
+#          "3d",
+#               "4a", "4b", "4c", "4d")
+sce <-   c("Taranaki data",
+           "1a", "1b", "1c", 
+           #"1d", #failed model
+           "2a", "2b", 
+           #"2c", "2d", #failed model
+           "3a", "3b", 
+           #"3c", # All CVs failed but two.
+           #"3d", #failed model
+           "4a", "4b"#, 
+           #"4c", # All CVs failed.
+           #"4d" # All CVs failed but three.
+           )
+
 network_type <- "full"
 
 # Loop over all modelling scenarios
@@ -142,27 +155,41 @@ for(scenario in sce){
       
       #Make predictions
       pred = Save_new$Report$R1_i #ALL prediction values
-      pred = pred[Data_inp_new$PredTF_i==1] #predicted POC, For test data
+      pred_train = pred[Data_inp_new$PredTF_i==0] #predicted POC, for training data
+      pred_eval = pred[Data_inp_new$PredTF_i==1] #predicted POC, For evaluation (test) data
       obs = round(Data_inp_new[Data_inp_new$PredTF_i==1,"b_i"]) #observed data, for test data
       
       #Save 
-      cv_list$predictions[[i]] <- pred #store predictions
+      cv_list$predictions_train[[i]] <- pred_train
+      cv_list$predictions[[i]] <- pred_eval #store predictions
       cv_list$obs[[i]] <- obs #store test data
       cv_list$labels[[i]] <- factor(as.logical(obs))
       levels(cv_list$labels[[i]]) <- c("FALSE", "TRUE") #ensure the levels are F/T
       
+      #Set up tables according to two thresholds - 0.5 and mean predicted POE from training data
+      
       misc_table <- table(factor(cv_list$obs[[i]], levels = c(0,1)), factor(round(cv_list$predictions[[i]]), levels = c(0,1))) #assumption is that >=0.5 = 1 and <0.5 = 0
       
+      new_pa <- factor(ifelse(pred_eval <= mean(pred_train), 0, 1), levels = c(0,1)) #using mean of training set as threshold
+      misc_table_thres <- table(factor(cv_list$obs[[i]], levels = c(0,1)), new_pa) #assumption is that >=0.5 = 1 and <0.5 = 0
       
       #TSS
       cv_list$TSS[[i]] <- TSS_func(misc_table = misc_table)
+      
+      cv_list$TSS_thres[[i]] <- TSS_func(misc_table = misc_table_thres)
       
       #Sensitivity and specificity
       cv_list$sn[[i]] <- misc_table["1","1"] / (misc_table["1","1"] + misc_table["1","0"])
       cv_list$sp[[i]] <- misc_table["0","0"] / (misc_table["0","0"] + misc_table["0","1"])
       
+      cv_list$sn_thres[[i]] <- misc_table_thres["1","1"] / (misc_table_thres["1","1"] + misc_table_thres["1","0"])
+      cv_list$sp_thres[[i]] <- misc_table_thres["0","0"] / (misc_table_thres["0","0"] + misc_table_thres["0","1"])
+      
       #RMSE
       cv_list$RMSE[[i]] <- RMSE(m=cv_list$predictions[[i]],o=cv_list$obs[[i]])
+      
+      
+      
       
       #Update counter:
       i <- i+1
@@ -170,14 +197,6 @@ for(scenario in sce){
     error=function(e) e) #If something fails then TryCatch will return an error then move to the next
     
   }
-  
-  
-  
-  ###########################
-  # TSS confidence interval #
-  ###########################
-  
-  ## ?
   
   
   #######

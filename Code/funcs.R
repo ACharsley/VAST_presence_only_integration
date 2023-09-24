@@ -4,14 +4,22 @@
 #########################
 
 
-#data_list should have a 'network', 'X_gctp (habitat)', 'obs' slot
+#data_list should have a 'network', 'covariate_df (habitat)', 'obs' slot
 create_ds_data <- function(data_list){
   
   library(tidyverse)
   
   network <- data_list$network
   obs <- data_list$obs
-  X_gctp <- data_list$X_gctp
+  covariate_df <- data_list$covariate_df
+  
+  ############################################################
+  #  Add child_s to covariate data to build downstream data  #
+  ############################################################
+  
+  network_to_join <- network %>% select(Lat, Lon, child_s)
+  
+  covariate_df <- left_join(covariate_df, network_to_join)
   
   #################
   #################
@@ -32,8 +40,7 @@ create_ds_data <- function(data_list){
   # habitat <- habitat %>% filter(child_s %in% network_sub$child_s)
   
   #Select nodes to keep for downstream data
-  rows_to_keep <- dimnames(X_gctp)[[1]][dimnames(X_gctp)[[1]] %in% network_sub$child_s]
-  X_gctp_ds <- X_gctp[rows_to_keep,,,,drop=FALSE]
+  covariate_df_ds <- covariate_df %>% filter(child_s %in% network_sub$child_s)
   
   ## Rename nodes ##
   nodes <- unique(c(network_sub$child_s, network_sub$parent_s))
@@ -64,34 +71,20 @@ create_ds_data <- function(data_list){
   
   #browser()
   
-  # #Rename nodes in habitat covariates
-  # habitat_children <- sapply(1:nrow(habitat), function(x) inodes[which(nodes == habitat$child_s[x])])
-  # 
-  # habitat_sub <- habitat
-  # habitat_sub$child_s <- habitat_children
-  
-  
-  #Rename nodes in habitat covariates
-  rownames_hab <- as.numeric(dimnames(X_gctp_ds)[[1]])
-  hab_children <- sapply(1:nrow(X_gctp_ds), function(x) inodes[which(nodes == rownames_hab[x])])
-  
-  dimnames(X_gctp_ds)[[1]] <- hab_children
-  
-  X_gctp_ds <- X_gctp_ds[order(hab_children),,,,drop=FALSE]
-  
+  #Drop child_s from 
+  covariate_df <- covariate_df %>% select(-c("child_s"))
+  covariate_df_ds <- covariate_df_ds %>% select(-c("child_s"))
   
   
   
   #Check all nodes in network
   print(all(obs_children %in% net_children))
-  #all(habitat_children %in% net_children)
-  print(all(dimnames(X_gctp_ds)[[1]] %in% net_children))
   
   data_list_all <- list("network" = network,
-                        "X_gctp" = X_gctp,
+                        "covariate_df" = covariate_df,
                         "obs" = obs,
                         "network_ds" = network_sub,
-                        "X_gctp_ds" = X_gctp_ds,
+                        "covariate_df_ds" = covariate_df_ds,
                         "obs_ds" = obs_sub)
   
   return(data_list_all)
@@ -296,26 +289,26 @@ plot_maps_network <-
       paste(strwrap(x, ...), collapse = "\n")
     }
     
-    #Function that sets the ggplot theme, edit depending on preferences
-    mytheme <- function (base_size = 14, base_family = "") 
-    {
-      theme_grey(base_size = base_size, base_family = base_family) %+replace%
-        theme(axis.title.x = element_text(margin = margin(10,0,0,0)),
-              #axis.title.x = element_text(vjust = -1.5),
-              #axis.title.y = element_text(margin = margin(0,20,0,0)),
-              #axis.title.y = element_text(vjust = -0.1),
-              legend.title = element_blank(),
-              axis.text = element_text(size = rel(0.5)),
-              axis.text.x = element_text(angle = 90),
-              axis.ticks = element_line(colour = "black"), 
-              legend.key = element_rect(colour = "grey80"),
-              panel.background = element_rect(fill = "white", colour = NA),
-              panel.border = element_rect(fill = NA, colour = "grey50"),
-              panel.grid.major = element_line(colour = "grey90", size = 0.2),
-              panel.grid.minor = element_line(colour = "grey98", size = 0.5),
-              strip.background = element_rect(fill = "grey80", colour = "grey50", size = 0.2))
-    }
-    ####
+    # #Function that sets the ggplot theme, edit depending on preferences
+    # mytheme <- function (base_size = 14, base_family = "") 
+    # {
+    #   theme_grey(base_size = base_size, base_family = base_family) %+replace%
+    #     theme(axis.title.x = element_text(margin = margin(10,0,0,0)),
+    #           #axis.title.x = element_text(vjust = -1.5),
+    #           #axis.title.y = element_text(margin = margin(0,20,0,0)),
+    #           #axis.title.y = element_text(vjust = -0.1),
+    #           legend.title = element_blank(),
+    #           axis.text = element_text(size = rel(0.5)),
+    #           axis.text.x = element_text(angle = 90),
+    #           axis.ticks = element_line(colour = "black"), 
+    #           legend.key = element_rect(colour = "grey80"),
+    #           panel.background = element_rect(fill = "white", colour = NA),
+    #           panel.border = element_rect(fill = NA, colour = "grey50"),
+    #           panel.grid.major = element_line(colour = "grey90", size = 0.2),
+    #           panel.grid.minor = element_line(colour = "grey98", size = 0.5),
+    #           strip.background = element_rect(fill = "grey80", colour = "grey50", size = 0.2))
+    # }
+    # ####
     
     #If statements to ensure that necessary variables have been specified
     if(missing(PlotName)){stop("PlotName is missing without any default")}
@@ -732,8 +725,16 @@ plot_maps_network <-
             
             #if(is.null(PlotName)){PlotName=plot_names[plot_num]}
             
-            if(Nplot!=1) p <- p + ggtitle(wrapper(paste(PlotTitle, " - ", category_names[cI]), width = 40))
-            if(Nplot==1) p <- p + ggtitle(wrapper(PlotTitle, width = 40))
+            if(Nplot!=1){
+              if(PlotTitle == ""){p <- p}else{
+                p <- p + ggtitle(wrapper(paste(PlotTitle, " - ", category_names[cI]), width = 40))
+              }
+            }
+            if(Nplot==1){
+              if(PlotTitle == ""){p <- p}else{
+                p <- p + ggtitle(wrapper(PlotTitle, width = 40))
+              }
+            } 
             
             if(!is.null(DirName)){
               
@@ -830,8 +831,16 @@ plot_maps_network <-
             
             #if(is.null(PlotName)){PlotName=plot_names[plot_num]}
             
-            if(Nplot!=1) p <- p + ggtitle(wrapper(paste(PlotTitle," - ", year_labels[years_to_plot[tI]]), width = 40))
-            if(Nplot==1) p <- p + ggtitle(wrapper(PlotTitle, width = 40))
+            if(Nplot!=1){
+              if(PlotTitle == ""){p <- p}else{
+                p <- p + ggtitle(wrapper(paste(PlotTitle," - ", year_labels[years_to_plot[tI]]), width = 40))
+              }
+            }
+            if(Nplot==1){
+              if(PlotTitle == ""){p <- p}else{
+                p <- p + ggtitle(wrapper(PlotTitle, width = 40))
+              }
+            }
             
             if(!is.null(DirName)){
               
@@ -1250,5 +1259,27 @@ plot_index_SN <-
 
 
 
+mytheme <- function (base_size = 14, base_family = "") 
+{
+  theme_grey(base_size = base_size, base_family = base_family) %+replace%
+    theme(axis.title.x = element_text(margin = margin(10,0,0,0)),
+          #axis.title.x = element_text(vjust = -1.5),
+          #axis.title.y = element_text(margin = margin(0,20,0,0)),
+          #axis.title.y = element_text(vjust = -0.1),
+          legend.title = element_blank(),
+          axis.text = element_text(size = rel(0.5)),
+          axis.text.x = element_text(angle = 90),
+          axis.ticks = element_line(colour = "black"), 
+          legend.key = element_rect(colour = "grey80"),
+          panel.background = element_rect(fill = "white", colour = NA),
+          panel.border = element_rect(fill = NA, colour = "grey50"),
+          panel.grid.major = element_line(colour = "grey90", size = 0.2),
+          panel.grid.minor = element_line(colour = "grey98", size = 0.5),
+          strip.background = element_rect(fill = "grey80", colour = "grey50", size = 0.2))
+}
 
 
+wrapper <- function(x, ...) 
+{
+  paste(strwrap(x, ...), collapse = "\n")
+}

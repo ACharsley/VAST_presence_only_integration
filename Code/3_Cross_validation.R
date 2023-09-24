@@ -25,8 +25,7 @@ library(VAST)
 #  Directories  #
 #################
 
-model_path <- paste0(getwd(), "/Models")
-
+model_path <- paste0(getwd(), "/Models") #only want to CV these models
 
 ####################
 #  Call functions  #
@@ -162,6 +161,7 @@ dir.create(path_cv_k, showWarnings = F)
 #Build new data object
 TmbData_new <- Fit$data_list
 TmbData_new$PredTF_i <- Data_inp_new$PredTF_i
+TmbData_new$Options_list$Options["SD_site_density"] <- 0
 
 #Build the VAST model 
 TmbList_new = make_model(build_model = TRUE, 

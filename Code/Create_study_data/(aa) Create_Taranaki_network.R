@@ -33,8 +33,8 @@ dir.create(fig_dir, showWarnings=FALSE)
 ##############
 
 library(tidyverse)
-library(proj4)
-# library(sf)
+# library(proj4)
+library(sf)
 library(corrplot)
 
 
@@ -50,41 +50,19 @@ load(file.path(raw_data_dir, "REC2.4_variables.RData"))
 network_raw <- REC2.4 ; rm(REC2.4)
 
 
-# #Covariates selected from Charsley et al. (2023) - these underwent VIF analysis and were selected by RRF models
-# covariates_charsleyetal <- read.csv(file.path(raw_data_dir, "Charsleyetal2023_Gini_scores.csv"))
-# covariates_charsleyetal <- covariates_charsleyetal %>% 
-#   filter(angdie != 0) %>%
-#   pull(X)
-# 
-# # #Covariates used in the Ngai Tahu study, perhaps reassess later ??
-# # REC_covs <- c("FWENZ_SegRipShade", "FWENZ_segSubstrate", "loc_slope", "FWENZ_segAveTWarm",
-# #               "Dist2Coast_FromMid", "DSDIST2LAK", "FWENZ_DSDamAffected")
-# 
-# 
-# #edit names so that match those in the REC database
-# covariates_charsleyetal[covariates_charsleyetal %in% names(network_raw)]
-# 
-# ## These variables couldn't be found
-# # "seg_hard", "x3", 
-# ## Additionally, the following hydrology variables couldn't be found and were replaced by
-# ## MeanFlowCumecs, "FWENZ_usLowFlow", "FWENZ_SegFlowStability":
-# # ("Contingency", "JulianMax.StandardisedByMeanFlow", "JulianMin.StandardisedByMeanFlow", 
-# # "Mean1DayFlowMins.StandardisedByMeanFlow", "nNeg.StandardisedByMeanFlow",
-# # "Predictability", "Reversals.StandardisedByMeanFlow")
-# 
-# REC_covs <- c("Dist2Coast", "StreamOrder", "sinuosity", "segslpmean", "seg_ro_mm", "FWENZ_usHard",
-#               "loc_elev", "us_slope", "loc_penpet", "loc_rnvar", "loc_rd100", "lc_phos", "us_phos",
-#               "loc_psize", "local_twarm", "DSDIST2LAK", "FWENZ_dsMaxSlope", "FWENZ_dsAveSlope", "us_ind",
-#               "FWENZ_USCalcium", "FWENZ_USLakePC", "FWENZ_segShade", "MeanFlowCumecs", "FWENZ_usLowFlow",
-#               "FWENZ_SegFlowStability",
-#               
-#               "FWENZ_DSDamAffected", "FWENZ_SegRipShade", "FWENZ_segSubstrate", "loc_slope", "FWENZ_segAveTWarm",
-#               "Dist2Coast_FromMid") #additional covariate to use
+#Covariates to initially consider based on the literature and expert opinion (version 1 of study):
+# initial_covs <- c("loc_elev", "StreamOrder", "seg_ro_mm", "FWENZ_SegRipShade", "MeanFlowCumecs", "FWENZ_segSubstrate",
+#               "FWENZ_DSDamAffected","local_twarm") #Average within section mean January air temperature. deg C x10
 
-#Covariates to initially consider based on the literature and expert opinion:
-initial_covs <- c("loc_elev", "StreamOrder", "seg_ro_mm", "FWENZ_SegRipShade", "MeanFlowCumecs", "FWENZ_segSubstrate",
-              "FWENZ_DSDamAffected","local_twarm") #Average within section mean January air temperature. deg C x10
+#Large set of covariates indentified in previous research as being important and through expert opinion
+initial_covs <- c("Dist2Coast", "StreamOrder", "sinuosity", "segslpmean", "seg_ro_mm", "FWENZ_usHard",
+              "loc_elev", "us_slope", "loc_penpet", "loc_rnvar", "loc_rd100", "lc_phos", "us_phos",
+              "loc_psize", "local_twarm", "DSDIST2LAK", "FWENZ_dsMaxSlope", "FWENZ_dsAveSlope", "us_ind",
+              "FWENZ_USCalcium", "FWENZ_USLakePC", "FWENZ_segShade", "MeanFlowCumecs", "FWENZ_usLowFlow",
+              "FWENZ_SegFlowStability",
 
+              "FWENZ_DSDamAffected", "FWENZ_SegRipShade", "FWENZ_segSubstrate", "loc_slope", "FWENZ_segAveTWarm",
+              "Dist2Coast_FromMid") #additional covariate to use
 
 # Create network for the taranaki with variables of interest
 network <- network_raw %>%
@@ -120,24 +98,6 @@ sapply(1:ncol(network), function(x) length(which(is.na(network[,x])))/nrow(netwo
 # #Remove NAs from network
 # anyNA(network)
 # sapply(1:ncol(network), function(x) length(which(is.na(network[,x])))/nrow(network)) #0 missing all columns
-
-
-#####################################
-# Examine correlation in covariates #
-#####################################
-
-covs_to_examine <- c("loc_elev", "StreamOrder", "seg_ro_mm", "FWENZ_SegRipShade", "MeanFlowCumecs", "FWENZ_segSubstrate","local_twarm")
-
-hab_REC_full_complete <- network %>% 
-  select(all_of(covs_to_examine))
-
-hab_REC_full_complete <- hab_REC_full_complete[complete.cases(hab_REC_full_complete[,covs_to_examine]),covs_to_examine]
-cor(hab_REC_full_complete)
-
-#StreamOrder and seg_ro_mm are less important variables and have high correlation with other important variables,
-#will remove these
-
-REC_covs <- c("loc_elev", "FWENZ_SegRipShade", "MeanFlowCumecs", "FWENZ_segSubstrate", "local_twarm")
 
 
 
@@ -230,27 +190,49 @@ nrow(unique(network_all %>% select(easting,northing))) == nrow(network_all)
 #  Latitude and longitude  #
 ############################
 
-## function to calculate latitude and longitude from eastings and northings
-calc_NZ_latlon <- function(northing, easting){
-  proj4string <- "+proj=tmerc +lat_0=0.0 +lon_0=173.0 +k=0.9996 +x_0=1600000.0 +y_0=10000000.0 +datum=WGS84 +units=m"
-  p <- project(matrix(c(easting, northing),nrow=1), proj=proj4string, inv=T)
-  colnames(p) <- c('Lon', 'Lat')
-  return(p)
-}
+# ## function to calculate latitude and longitude from eastings and northings
+# calc_NZ_latlon <- function(northing, easting){
+#   proj4string <- "+proj=tmerc +lat_0=0.0 +lon_0=173.0 +k=0.9996 +x_0=1600000.0 +y_0=10000000.0 +datum=WGS84 +units=m"
+#   p <- project(matrix(c(easting, northing),nrow=1), proj=proj4string, inv=T)
+#   colnames(p) <- c('Lon', 'Lat')
+#   return(p)
+# }
+# 
+# ## latitude and longitude for child nodes in network
+# network_ll_child <- lapply(1:nrow(network_all), function(x){
+#   p <- calc_NZ_latlon(northing = network_all$northing[x], easting = network_all$easting[x])
+#   return(p)
+# })
+# network_ll_child <- do.call(rbind, network_ll_child)
+# 
+# ## attach latitude and longtiude to network
+# network_full <- cbind.data.frame(network_all, network_ll_child)
 
-## latitude and longitude for child nodes in network
-network_ll_child <- lapply(1:nrow(network_all), function(x){
-  p <- calc_NZ_latlon(northing = network_all$northing[x], easting = network_all$easting[x])
-  return(p)
-})
-network_ll_child <- do.call(rbind, network_ll_child)
+#Convert to correct coordinate system
+#Projection info needed
+proj_latlong <- CRS("+init=epsg:4326")
+proj_XY <- "+init=epsg:2193"
 
-## attach latitude and longtiude to network
-network_full <- cbind.data.frame(network_all, network_ll_child)
+
+## Convert x/y network coords to lat/longs ##
+net_xy <- as.data.frame(network_all[,c("easting", "northing")]) #x and y coordinates
+coordinates(net_xy) <- c("easting", "northing") #set as coordinates
+proj4string(net_xy) <- proj_XY #Set current projection
+
+net_latlong <- spTransform(net_xy, proj_latlong) #project
+
+coords <- coordinates(net_latlong)
+
+## Add new coords to ens_data
+network_all$Lon <- coords[,"easting"]
+network_all$Lat <- coords[,"northing"]
+
+## Rename final network
+network_full <- network_all
+
 nrow(network_full)
 nrow(unique(network_full))
-nrow(network_full %>% select('Lat','Lon'))
-nrow(network_full %>% select('easting','northing'))
+
 
 
 ################
