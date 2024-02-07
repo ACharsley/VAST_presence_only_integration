@@ -11,13 +11,18 @@ rm(list=ls())
 ##############
 
 scenarios <-   c("Taranaki data",
-                 "1a", "1b", "1c", 
-                 #"1d", #failed model
-                 "2a", "2b", 
-                 #"2c", "2d", #failed model
-                 "3a", "3b", "3c", 
-                 #"3d", #failed model
-                 "4a", "4b", "4c", "4d")
+                 "1a", #"1b",
+                 #"1c","1d", # Both worked but currently not Cross validated and results look strange
+                 "2a", #"2b", 
+                 #"2c","2d", #failed model
+                 "3a", "3b", 
+                 #"3c", #failed model
+                 #"3d", #Worked but currently not Cross validated and results look strange
+                 "4a"
+                 #, "4b", # Model failed
+                 # "4c",  #worked but currently not Cross validated and ...
+                 #"4d" # Model failed
+                 )
 
 network_type <- "full"
 
@@ -68,6 +73,7 @@ for(sce in 1:length(scenarios)){
 
 CV_failed
 
+# Version 1
 # $`3c`
 # [1]  1  2  3  5  6  7  9 10
 # All CVs failed but two. Lapack routine dgesv: system is exactly singular
@@ -81,3 +87,10 @@ CV_failed
 # All CVs failed but three.
 
 
+
+# Won't re-run as only a few failed
+# $`Taranaki data`
+# [1] 6
+# 
+# $`3b`
+# [1] 5

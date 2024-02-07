@@ -86,210 +86,134 @@ cor(data_full[,covariate_names])
 data_full$Barrier_present <- factor(data_full$Barrier_present)
 
 
+#######################
+# Combine Fish Method #
+#######################
+# Have done this as I want the GAMs to have
+# approximately the same set up as the VAST
+# models will have. Also for consistency with the HSM.
 
-###########
-# Fit GAM #
-###########
-
-# bingam1 = gam( Encounter ~ Year + FishMethod + org +
-#                  s(std_Dist2Coast, k=4, bs="ts") +
-#                  s(std_log_seg_ro_mm, k=4, bs="ts") +
-#                  s(std_FWENZ_SegRipShade, k=4, bs="ts") +
-#                  s(std_log_MeanFlowCumecs, k=4, bs="ts") +
-#                  s(std_FWENZ_segSubstrate, k=4, bs="ts") +
-#                  s(std_local_twarm, k=4, bs="ts") +
-#                  Barrier_present,
-#               family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-# 
-# summary(bingam1)
-# 
-# bingam2 = gam( Encounter ~ Year + FishMethod + org +
-#                  s(std_Dist2Coast, k=4, bs="ts") +
-#                  s(std_FWENZ_SegRipShade, k=4, bs="ts") +
-#                  s(std_log_MeanFlowCumecs, k=4, bs="ts") +
-#                  s(std_FWENZ_segSubstrate, k=4, bs="ts") +
-#                  s(std_local_twarm, k=4, bs="ts") +
-#                  Barrier_present,
-#                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-# 
-# summary(bingam2)
-# 
-# bingam3 = gam( Encounter ~ Year + FishMethod + org +
-#                  s(std_Dist2Coast, k=4, bs="ts") +
-#                  s(std_FWENZ_SegRipShade, k=4, bs="ts") +
-#                  s(std_log_MeanFlowCumecs, k=4, bs="ts") +
-#                  s(std_FWENZ_segSubstrate, k=4, bs="ts") +
-#                  Barrier_present,
-#                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-# 
-# summary(bingam3)
-# 
-# 
-# bingam4 = gam( Encounter ~ Year + FishMethod + org +
-#                  s(std_Dist2Coast, k=4, bs="ts") +
-#                  s(std_FWENZ_SegRipShade, k=4, bs="ts") +
-#                  s(std_FWENZ_segSubstrate, k=4, bs="ts") +
-#                  Barrier_present,
-#                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-# 
-# summary(bingam4)
-# 
-# bingam5 = gam( Encounter ~ Year + FishMethod + org +
-#                  s(std_Dist2Coast, k=4, bs="ts") +
-#                  s(std_FWENZ_segSubstrate, k=4, bs="ts") +
-#                  Barrier_present,
-#                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-# 
-# summary(bingam5)
-# 
-# bingam6 = gam( Encounter ~ Year + FishMethod + org +
-#                  s(std_Dist2Coast, k=4, bs="ts") +
-#                  s(std_FWENZ_segSubstrate, k=4, bs="ts"),
-#                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-# 
-# summary(bingam6)
-# 
-# bingam7 = gam( Encounter ~ Year + FishMethod + org +
-#                  s(std_Dist2Coast, k=4, bs="ts"),
-#                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-# 
-# summary(bingam7)
+table(data_full$FishMethod, useNA = "ifany")
+data_full$FishMethod <- ifelse(data_full$FishMethod == "Electric fishing", "Electric fishing", "NetTrap")
 
 
-
-
-## Removing org as it is assumed that catchability doesn't change between organisation for the more reliable 'structured data'
-
-
-# bingam1b = gam( Encounter ~ Year + FishMethod + #org + 
-#                  s(std_Dist2Coast, k=4, bs="ts") +
-#                  s(std_log_seg_ro_mm, k=4, bs="ts") +
-#                  s(std_FWENZ_SegRipShade, k=4, bs="ts") + 
-#                  s(std_log_MeanFlowCumecs, k=4, bs="ts") + 
-#                  s(std_FWENZ_segSubstrate, k=4, bs="ts") +
-#                  s(std_local_twarm, k=4, bs="ts") + 
-#                  Barrier_present, 
-#                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
+# ###########
+# # Fit GAM #
+# ###########
+# 
+# ## With Net and Trap together as NetTrap
+# bingam1b = gam( Encounter ~ Year + FishMethod + #org +
+#                   s(std_Dist2Coast, k=4, bs="ts") +
+#                   s(std_log_loc_elev, k=4, bs="ts") +
+#                   s(std_log_seg_ro_mm, k=4, bs="ts") +
+#                   s(std_FWENZ_SegRipShade, k=4, bs="ts") +
+#                   s(std_log_MeanFlowCumecs, k=4, bs="ts") +
+#                   s(std_FWENZ_segSubstrate, k=4, bs="ts") +
+#                   Barrier_present,
+#                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
 # 
 # summary(bingam1b)
 # 
+# #Remove std_log_MeanFlowCumecs
 # bingam2b = gam( Encounter ~ Year + FishMethod + #org +
-#                  s(std_Dist2Coast, k=4, bs="ts") +
-#                  s(std_log_seg_ro_mm, k=4, bs="ts") +
-#                  s(std_FWENZ_SegRipShade, k=4, bs="ts") +
-#                  s(std_FWENZ_segSubstrate, k=4, bs="ts") +
-#                  s(std_local_twarm, k=4, bs="ts") +
-#                  Barrier_present,
-#                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
+#                   s(std_Dist2Coast, k=4, bs="ts") +
+#                   s(std_log_loc_elev, k=4, bs="ts") +
+#                   s(std_log_seg_ro_mm, k=4, bs="ts") +
+#                   s(std_FWENZ_SegRipShade, k=4, bs="ts") +
+#                   s(std_FWENZ_segSubstrate, k=4, bs="ts") +
+#                   Barrier_present,
+#                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
 # 
 # summary(bingam2b)
 # 
+# #Remove Barrier_present
 # bingam3b = gam( Encounter ~ Year + FishMethod + #org +
-#                  s(std_Dist2Coast, k=4, bs="ts") +
-#                  s(std_FWENZ_SegRipShade, k=4, bs="ts") +
-#                  s(std_FWENZ_segSubstrate, k=4, bs="ts") +
-#                  s(std_local_twarm, k=4, bs="ts") +
-#                  Barrier_present,
-#                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
+#                   s(std_Dist2Coast, k=4, bs="ts") +
+#                   s(std_log_loc_elev, k=4, bs="ts") +
+#                   s(std_log_seg_ro_mm, k=4, bs="ts") +
+#                   s(std_FWENZ_SegRipShade, k=4, bs="ts") +
+#                   s(std_FWENZ_segSubstrate, k=4, bs="ts"),
+#                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
 # 
 # summary(bingam3b)
 # 
+# #Remove std_log_seg_ro_mm
 # bingam4b = gam( Encounter ~ Year + FishMethod + #org +
-#                  s(std_Dist2Coast, k=4, bs="ts") +
-#                  s(std_FWENZ_SegRipShade, k=4, bs="ts") +
-#                  s(std_local_twarm, k=4, bs="ts") +
-#                  Barrier_present,
-#                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
+#                   s(std_Dist2Coast, k=4, bs="ts") +
+#                   s(std_log_loc_elev, k=4, bs="ts") +
+#                   s(std_FWENZ_SegRipShade, k=4, bs="ts") +
+#                   s(std_FWENZ_segSubstrate, k=4, bs="ts"),
+#                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
 # 
 # summary(bingam4b)
 # 
+# #Remove std_Dist2Coast
 # bingam5b = gam( Encounter ~ Year + FishMethod + #org +
-#                  s(std_Dist2Coast, k=4, bs="ts") +
-#                  s(std_FWENZ_SegRipShade, k=4, bs="ts") +
-#                  Barrier_present,
-#                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
+#                   s(std_log_loc_elev, k=4, bs="ts") +
+#                   s(std_FWENZ_SegRipShade, k=4, bs="ts") +
+#                   s(std_FWENZ_segSubstrate, k=4, bs="ts"),
+#                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
 # 
-# summary(bingam5b)
-# 
-# bingam6b = gam( Encounter ~ Year + FishMethod + #org +
-#                  s(std_Dist2Coast, k=4, bs="ts") +
-#                  Barrier_present,
-#                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-# 
-# summary(bingam6b)
-# 
-# bingam7b = gam( Encounter ~ Year + FishMethod + #org + 
-#                  s(std_Dist2Coast, k=4, bs="ts"), 
-#                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-# 
-# summary(bingam7b)
+# summary(bingam5b) ## small p-value and EDF greater than 0.9
 
 
-bingam1b = gam( Encounter ~ Year + FishMethod + #org + 
+
+#############################
+# Fit GAM with spatial term #
+#############################
+
+## With Net and Trap together as NetTrap
+bingam1b = gam( Encounter ~ Year + FishMethod + te(Lat,Lon) +
                   s(std_Dist2Coast, k=4, bs="ts") +
                   s(std_log_loc_elev, k=4, bs="ts") +
                   s(std_log_seg_ro_mm, k=4, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=4, bs="ts") + 
-                  s(std_log_MeanFlowCumecs, k=4, bs="ts") + 
+                  s(std_FWENZ_SegRipShade, k=4, bs="ts") +
+                  s(std_log_MeanFlowCumecs, k=4, bs="ts") +
                   s(std_FWENZ_segSubstrate, k=4, bs="ts") +
-                  Barrier_present, 
+                  Barrier_present,
                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
 
 summary(bingam1b)
 
 #Remove std_log_MeanFlowCumecs
-bingam2b = gam( Encounter ~ Year + FishMethod + #org + 
+bingam2b = gam( Encounter ~ Year + FishMethod +  te(Lat,Lon) +
                   s(std_Dist2Coast, k=4, bs="ts") +
                   s(std_log_loc_elev, k=4, bs="ts") +
                   s(std_log_seg_ro_mm, k=4, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=4, bs="ts") + 
+                  s(std_FWENZ_SegRipShade, k=4, bs="ts") +
                   s(std_FWENZ_segSubstrate, k=4, bs="ts") +
-                  Barrier_present, 
+                  Barrier_present,
                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
 
 summary(bingam2b)
 
-#Remove std_FWENZ_segSubstrate
-bingam3b = gam( Encounter ~ Year + FishMethod + #org + 
+#Remove Barrier_present
+bingam3b = gam( Encounter ~ Year + FishMethod +  te(Lat,Lon) +
                   s(std_Dist2Coast, k=4, bs="ts") +
                   s(std_log_loc_elev, k=4, bs="ts") +
                   s(std_log_seg_ro_mm, k=4, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=4, bs="ts") + 
-                  Barrier_present, 
+                  s(std_FWENZ_SegRipShade, k=4, bs="ts") +
+                  s(std_FWENZ_segSubstrate, k=4, bs="ts"),
                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
 
 summary(bingam3b)
 
-#Remove Barrier_present
-bingam4b = gam( Encounter ~ Year + FishMethod + #org + 
+#Remove std_log_seg_ro_mm
+bingam4b = gam( Encounter ~ Year + FishMethod + te(Lat,Lon) +
                   s(std_Dist2Coast, k=4, bs="ts") +
                   s(std_log_loc_elev, k=4, bs="ts") +
-                  s(std_log_seg_ro_mm, k=4, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=4, bs="ts"), 
+                  s(std_FWENZ_SegRipShade, k=4, bs="ts") +
+                  s(std_FWENZ_segSubstrate, k=4, bs="ts"),
                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
 
 summary(bingam4b)
 
-#Remove std_log_seg_ro_mm
-bingam5b = gam( Encounter ~ Year + FishMethod + #org + 
-                  s(std_Dist2Coast, k=4, bs="ts") +
+#Remove std_Dist2Coast
+bingam5b = gam( Encounter ~ Year + FishMethod + te(Lat,Lon) +
                   s(std_log_loc_elev, k=4, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=4, bs="ts"), 
+                  s(std_FWENZ_SegRipShade, k=4, bs="ts") +
+                  s(std_FWENZ_segSubstrate, k=4, bs="ts"),
                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
 
-summary(bingam5b)
+summary(bingam5b) ## small p-value and EDF greater than 0.9
 
-#Remove std_FWENZ_SegRipShade
-bingam6b = gam( Encounter ~ Year + FishMethod + #org + 
-                  s(std_Dist2Coast, k=4, bs="ts") +
-                  s(std_log_loc_elev, k=4, bs="ts"), 
-                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-
-summary(bingam6b)
-
-#Remove std_log_loc_elev as edf less than 0.9 and smallest between remaining variables
-bingam7b = gam( Encounter ~ Year + FishMethod + #org + 
-                  s(std_Dist2Coast, k=4, bs="ts"), 
-                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-
-summary(bingam7b) ## small p-value and EDF greater than 0.9

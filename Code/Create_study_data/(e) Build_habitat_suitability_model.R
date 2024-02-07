@@ -76,7 +76,7 @@ coords <- as.matrix(NZFFD_data[,c("Lat","Lon")])
 # )
 
 #Only using distance to coast as identified in (d)
-covariate_names <- c("std_Dist2Coast")
+covariate_names <- c("std_log_loc_elev", "std_FWENZ_SegRipShade","std_FWENZ_segSubstrate")
 
 #hab_data <- X_gctp[NZFFD_data$child_i,,"2022",covariate_names]
 #hab_data <- data.frame(hab_data)
@@ -106,16 +106,6 @@ pred_coords <- covariate_df %>%
   filter(Year == 2022) %>%
   select("Lat","Lon")
 
-
-
-
-# ## NOTE FishMethod couldn't be fit, so now removing from models ##
-# ## Looks like not enough levels in some cases to perform model validation
-# ## I get the error: Error in { : task 3 failed - "contrasts can be applied only to factors with 2 or more levels"
-# hab_data <- hab_data %>% select(-c("FishMethod"))
-# pred_data <- pred_data %>% select(-c("FishMethod"))
-####
-
 myBiomodData <- BIOMOD_FormatingData(resp.var = PA_data,
                                      expl.var = hab_data, 
                                      resp.xy = coords,
@@ -124,22 +114,6 @@ myBiomodData <- BIOMOD_FormatingData(resp.var = PA_data,
 myBiomodData
 plot(myBiomodData)
 
-# Create default modeling options
-#myBiomodOptions <- BIOMOD_ModelingOptions(GAM = list(k = 3)) #Change k as error occurs when k=-1
-#myBiomodOptions <- BIOMOD_ModelingOptions() #Change k as error occurs when k=-1
-#myBiomodOptions
-#Print_Default_ModelingOptions()
-
-# ####################################
-# # Create cross-validation datasets #
-# ####################################
-# 
-# myBiomodCV <- BIOMOD_cv(data = myBiomodData,
-#                         k=10,
-#                         repetition = 1)
-# head(myBiomodCV)
-# 
-# 
 
 #############
 # Run Model #

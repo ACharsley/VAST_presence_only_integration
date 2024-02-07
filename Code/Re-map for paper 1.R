@@ -14,8 +14,8 @@ rm(list=ls())
 #  Packages  #
 ##############
 
-library(tidyverse)
 library(plyr)
+library(tidyverse)
 
 
 
@@ -43,7 +43,8 @@ network_type <- "full"
 SE_switch <- "SE_off"
 
 #scenario <- "Taranaki data" #"1a" "1b" "2a" "2b" "3a" "3b" "4a" "4b"
-scenario <- c("Taranaki data", "1a", "1b", "2a", "2b", "3a", "3b", "4a", "4b")
+#scenario <- c("Taranaki data", "1a", "1b", "2a", "2b", "3a", "3b", "4a", "4b")
+scenario <- c("Taranaki data", "1a", "2a", "3a", "3b", "4a")
 
 
 for(sce in scenario){

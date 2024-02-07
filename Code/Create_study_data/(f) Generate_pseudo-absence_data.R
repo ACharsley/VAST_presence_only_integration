@@ -42,7 +42,10 @@ dir.create(pseudoabsence_data_dir, showWarnings = F)
 
 ##Network
 network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
-network_to_sample <- network %>% filter(parent_s!=0, FWENZ_isLake!=TRUE)
+network_to_sample <- network %>% filter(parent_s!=0, FWENZ_isLake!=TRUE) 
+#I have removed lake location as I don't want any data from lakes (presence, absence or pseudo-absence).
+#Lakes follow a different process so best to leave these areas for spatial interpolation and remove later
+#if necessary.
 
 ##NZFFD encounter/non-encounter data
 NZFFD_data <- readRDS(file.path(data_taranaki_dir, "Taranaki_NZFFD_ene_data.rds"))
@@ -61,7 +64,9 @@ load(file.path(HSM_dir, "HSM_encounter_prob.RData"))
 
 ##Set unsuitable habitat as anything less than 0.5
 summary(HSM_encounter_prob$POE)
-unsuit_hab_cutoff <- 0.5
+# Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+# 0.237   0.416   0.476   0.483   0.549   0.717
+unsuit_hab_cutoff <- summary(HSM_encounter_prob$POE)["Mean"] # 0.48 - mean probability of encounter 
 
 ##Road data
 NZ_roads_data <- read_sf(dsn = raw_data_dir, layer = "nz-primary-road-parcels") #Data extracted on 14/11/22 from https://data.linz.govt.nz/layer/50796-nz-primary-road-parcels/
@@ -113,25 +118,22 @@ for(i in c(1:length(years_to_sample))){
   print(years_to_sample[i])
   
   
-  #Remove NZFFD locations for year of interest
-  ##to_remove <- NZFFD_data$child_i[NZFFD_data$Year == years_to_sample[i] & NZFFD_data$`Anguilla dieffenbachii` == 1]
+  #Remove structured data presence locations for year of interest
   to_remove1 <- NZFFD_data %>%
     filter(Year == years_to_sample[i] & `Anguilla dieffenbachii` == 1) %>%
     pull(child_i)
   
-  #Remove encounter-only locations for all years except the year of interest
-  ##to_remove2 <- encounter_only_lf_data$child_i[encounter_only_lf_data$Year == years_to_sample[i]] #no need to filter out lf==1 as all are ==1
+  #Remove presence-only locations for all years except the year of interest
   to_remove2 <- encounter_only_lf_data %>%
     filter(Year == years_to_sample[i]) %>%
     pull(child_i)
-  
-  #browser()
   
   #Add together
   to_remove <- c(to_remove1, to_remove2)
   to_remove <- unique(to_remove)
   
-  #If there is data in that year take a sample, if not no pseudo-absence data for that year
+  #I'm looping over years of data from the presence-only data (years_to_sample). 
+  #So, if there is data in that year, take a sample, if not no pseudo-absence data for that year.
   if(length(to_remove)>0){
     
     data_to_sample <- network_to_sample %>% 
@@ -207,23 +209,22 @@ for(i in c(1:length(years_to_sample))){
   print(years_to_sample[i])
   
   
-  #Remove NZFFD locations for year of interest
+  #Remove structured data presence locations for year of interest
   to_remove1 <- NZFFD_data %>%
     filter(Year == years_to_sample[i] & `Anguilla dieffenbachii` == 1) %>%
     pull(child_i)
   
-  #Remove encounter-only locations for year of interest
+  #Remove presence-only locations for year of interest
   to_remove2 <- encounter_only_lf_data %>%
     filter(Year == years_to_sample[i]) %>%
     pull(child_i)
-  
-  #browser()
   
   #Add together
   to_remove <- c(to_remove1, to_remove2, suitable_hab_to_remove)
   to_remove <- unique(to_remove)
   
-  #If there is data in that year take a sample, if not no pseudo-absence data for that year
+  #I'm looping over years of data from the presence-only data (years_to_sample). 
+  #So, if there is data in that year, take a sample, if not no pseudo-absence data for that year.
   if(length(to_remove)>0){
     
     data_to_sample <- network_to_sample %>% 
@@ -344,7 +345,7 @@ for(i in c(1:length(years_to_sample))){
   print(years_to_sample[i])
   
   
-  #Remove NZFFD locations for year of interest
+  #Remove structured data presence locations for year of interest
   to_remove1 <- NZFFD_data %>%
     filter(Year == years_to_sample[i] & `Anguilla dieffenbachii` == 1) %>%
     pull(child_i)
@@ -354,13 +355,12 @@ for(i in c(1:length(years_to_sample))){
     filter(Year == years_to_sample[i]) %>%
     pull(child_i)
   
-  #browser()
-  
   #Add together
   to_remove <- c(to_remove1, to_remove2, locations_far_from_roads)
   to_remove <- unique(to_remove)
   
-  #If there is data in that year take a sample, if not no pseudo-absence data for that year
+  #I'm looping over years of data from the presence-only data (years_to_sample). 
+  #So, if there is data in that year, take a sample, if not no pseudo-absence data for that year.
   if(length(to_remove)>0){
     
     data_to_sample <- network_to_sample %>% 
@@ -409,10 +409,10 @@ sample_OM_3a <- do.call(rbind, sample_OM_3a)
 sample_OM_3b <- do.call(rbind, sample_OM_3b)
 
 
-#####################################################################
-# 4. Random generation at locations within 2km of a registered road #
-#    and with unsuitable longfin eel habitat                        #
-#####################################################################
+######################################################################
+# 4. Random generation at locations within 500m of a registered road #
+#    and with unsuitable longfin eel habitat                         #
+######################################################################
 
 sample_4a = sample_4b = sample_4c = sample_4d =  sample_OM_4a = sample_OM_4b = list()
 
@@ -424,7 +424,7 @@ for(i in c(1:length(years_to_sample))){
   print(years_to_sample[i])
   
   
-  #Remove NZFFD locations for year of interest
+  #Remove structured data presence locations for year of interest
   to_remove1 <- NZFFD_data %>%
     filter(Year == years_to_sample[i] & `Anguilla dieffenbachii` == 1) %>%
     pull(child_i)
@@ -434,13 +434,12 @@ for(i in c(1:length(years_to_sample))){
     filter(Year == years_to_sample[i]) %>%
     pull(child_i)
   
-  #browser()
-  
   #Add together
   to_remove <- c(to_remove1, to_remove2, locations_far_from_roads, suitable_hab_to_remove)
   to_remove <- unique(to_remove)
   
-  #If there is data in that year take a sample, if not no pseudo-absence data for that year
+  #I'm looping over years of data from the presence-only data (years_to_sample). 
+  #So, if there is data in that year, take a sample, if not no pseudo-absence data for that year.
   if(length(to_remove)>0){
     
     data_to_sample <- network_to_sample %>% 
@@ -601,7 +600,7 @@ catchmap <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Habitat), size=3, alpha = 0.6) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("Longfin eel suitable and unsuitable habitat") +
   
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + 
@@ -626,7 +625,7 @@ catchmap2 <- ggplot(Data_to_plot2) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = round(distance_to_road_km, 2)), size=3, alpha = 0.6) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("Distance to nearest road (km)") +
   
   labs(colour = "") +

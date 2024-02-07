@@ -85,7 +85,6 @@ dam_data_to_join$Year_barrier_finished[dam_data_to_join$CatName_ID == "Waingongo
 ## Find segments upstream of dam ##
 ###################################
 
-
 ## Load network to extract habitat covariates
 network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network_aa.rds"))
 
@@ -152,9 +151,4 @@ all(network$child_s %in% dam_data_final$child_s) #unique ID same in both so can 
 
 ## Save ##
 saveRDS(dam_data_final, file.path(data_taranaki_dir, "Taranaki_network.rds"))
-
-
-
-
-
 

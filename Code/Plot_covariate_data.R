@@ -17,7 +17,8 @@ library(tidyverse)
 #################
 
 VAST_input_data_dir <- paste0(getwd(), "/Data_processed/VAST_input_data")
-fig_dir <- paste0(getwd(), "/Data_processed/Figures/Covariate_plots")
+fig_dir <- paste0(getwd(), "/Data_processed/Figures")
+covariate_plot_dir <- file.path(fig_dir, "Covariate_plots")
 data_taranaki_dir <- "./Data_processed"
 
 
@@ -68,45 +69,36 @@ for(cov in covars_all){# cov = "Barrier_present"
   data_to_plot <- covariate_df %>%
     mutate("Covariate" = covariate_df[,cov])
   
-  catchmap <- ggplot(data_to_plot) +
-    #geom_point(data=network, aes(x = Lon, y = Lat), col="gray") +
-    geom_point(aes(x = Lon, y = Lat, col=Covariate), alpha=0.6) +
-    facet_wrap(~Year) +
-    scale_colour_distiller(palette = "RdYlGn") +
-    xlab("Longitude") + ylab("Latitude") +
-    ggtitle(paste0("Catchment map of ", cov)) + 
-    #guides(col=guide_legend(title="")) +
-    theme_bw(base_size = 14)
-  if(network_type == "downstream"){ggsave(file.path(fig_dir, paste0("Covariate_map_yr_ds - ", cov,".png")), catchmap)}
-  if(network_type == "full"){ggsave(file.path(fig_dir, paste0("Covariate_map_yr - ", cov,".png")), catchmap)}
-  
-  
-  catchmap2 <- ggplot(data_to_plot) +
-    #geom_point(data=network, aes(x = Lon, y = Lat), col="gray") +
-    geom_point(aes(x = Lon, y = Lat, col=Covariate), alpha=0.6) +
-    scale_colour_distiller(palette = "RdYlGn") +
-    xlab("Longitude") + ylab("Latitude") +
-    ggtitle(paste0("Catchment map of ", cov)) + 
-    #guides(col=guide_legend(title="")) +
-    theme_bw(base_size = 14)
-  if(network_type == "downstream"){ggsave(file.path(fig_dir, paste0("Covariate_map_ds - ", cov,".png")), catchmap2)}
-  if(network_type == "full"){ggsave(file.path(fig_dir, paste0("Covariate_map - ", cov,".png")), catchmap2)}
-  
-}
-
-#Raw covariate data
-for(cov in REC_covs){# cov = "loc_elev"
-  
-  data_to_plot <- raw_covs %>%
-    mutate("Covariate" = raw_covs[,cov])
-  
-  catchmap3 <- ggplot(data_to_plot) +
-    geom_point(aes(x = Lon, y = Lat, col=Covariate), alpha=0.6) +
-    scale_colour_distiller(palette = "RdYlGn") +
-    xlab("Longitude") + ylab("Latitude") +
-    ggtitle(paste0("Catchment map of ", cov)) + 
-    theme_bw(base_size = 14)
-  if(network_type == "downstream"){ggsave(file.path(fig_dir, paste0("Raw_covariate_map_ds - ", cov,".png")), catchmap3)}
-  if(network_type == "full"){ggsave(file.path(fig_dir, paste0("Raw_covariate_map - ", cov,".png")), catchmap3)}
-  
+  if(cov %in% c("std_Years_since_barrier", "Barrier_present")){
+    
+    catchmap4 <- ggplot(data_to_plot) +
+      geom_point(aes(x = Lon, y = Lat, col=Covariate), alpha=0.6) +
+      facet_wrap(~Year) +
+      scale_colour_distiller(palette = "RdYlGn", direction = 1) +
+      xlab("Longitude (°E)") + ylab("Latitude (°N)") +
+      #ggtitle(paste0("Catchment map of ", cov)) + 
+      #theme_bw(base_size = 14)
+      labs(colour = "") +
+      theme(axis.title=element_text(size = rel(1.5),face="bold"),
+            axis.text.x=element_text(angle = 90, vjust = 0.5, hjust=1, size=6),
+            axis.text.y=element_text(size=6),
+            legend.text=element_text(size = rel(1.5)))
+    ggsave(file.path(covariate_plot_dir, paste0("Final_covariate_map - ", cov,".png")), catchmap4)
+    
+  }else{
+    
+    catchmap5 <- ggplot(data_to_plot) +
+      geom_point(aes(x = Lon, y = Lat, col=Covariate), alpha=0.6) +
+      scale_colour_distiller(palette = "RdYlGn", direction = 1) +
+      xlab("Longitude (°E)") + ylab("Latitude (°N)") +
+      #ggtitle(paste0("Catchment map of ", cov)) + 
+      labs(colour = "") +
+      theme_bw(base_size = 14) +
+      theme(axis.text = element_text(size = rel(1)),
+            axis.title=element_text(size = rel(1.5),face="bold"),
+            axis.text.x = element_text(angle = 90),
+            legend.text=element_text(size = rel(1.5)))
+    ggsave(file.path(covariate_plot_dir, paste0("Final_covariate_map - ", cov,".png")), catchmap5)
+    
+  }
 }

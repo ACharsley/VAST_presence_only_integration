@@ -1,5 +1,5 @@
 
-1. Ensure libraries tidyverse, VAST, DHARMa, ROCR and cvAUC work
+1. Ensure libraries tidyverse, VAST work
 
 2. Ensure model data (Fit.RData) is in folder /Models/.../
 
@@ -19,14 +19,14 @@ nano VAST_ff_CV.sl
 #!/bin/bash -e
 #SBATCH --job-name=VAST_ff_CV # job name (shows up in the queue)
 #SBATCH --account=niwa03825  #niwa03825 (Toitu Nga Taonga Waimaori) or niwa03347 (Population modelling group)
-#SBATCH --time=7:00:00      # Walltime (HH:MM:SS)
+#SBATCH --time=6:00:00      # Walltime (HH:MM:SS)
 #SBATCH --mem=32000MB          # Memory in MB - trying 100 GB at first
 #SBATCH --cpus-per-task=4                # test using 2 then 4 and see if the speed increases, if not R
 #SBATCH --mail-user=Anthony.Charsley@niwa.co.nz
 #SBATCH --mail-type=ALL
 #SBATCH --output=VAST_ff_CV_%a.%j.out # Include the job ID in the names of
 #SBATCH --error=VAST_ff_CV_%a.%j.err # the output and error files
-#SBATCH --array=1-170                     # Array jobs 1-170
+#SBATCH --array=1-20,51-60,91-110,131-140  # Array jobs 1-170, will only CV structured data only model and a,b 1-4 models
 
 
 taskset -c -p $$          #Prints which CPUs it can use

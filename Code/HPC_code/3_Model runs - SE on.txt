@@ -26,7 +26,7 @@ nano VAST_ffmod_SEon.sl
 #SBATCH --mail-type=ALL
 #SBATCH --output=VAST_ffmod_SEon_%a.%j.out # Include the job ID in the names of
 #SBATCH --error=VAST_ffmod_SEon_%a.%j.err # the output and error files
-#SBATCH --array=1-4,6,7,10-12,14-16                     # Array jobs
+#SBATCH --array=1,2,6,10-11,14                     # Array jobs
 
 
 taskset -c -p $$          #Prints which CPUs it can use

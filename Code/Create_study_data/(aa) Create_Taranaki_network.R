@@ -34,7 +34,7 @@ dir.create(fig_dir, showWarnings=FALSE)
 
 library(tidyverse)
 # library(proj4)
-library(sf)
+library(sp)
 library(corrplot)
 
 
@@ -42,17 +42,9 @@ library(corrplot)
 #  Load and filter data  #
 ##########################
 
-#Can use updated data:
-# network_raw <- read_sf(dsn = file.path(raw_data_dir, "REC2_geodata_version_5", "nzRec2_v5.gdb")) #Data extracted on 19/01/23 from https://niwa.co.nz/freshwater/management-tools/river-environment-classification-0
-
 ## Raw REC network data
 load(file.path(raw_data_dir, "REC2.4_variables.RData"))
 network_raw <- REC2.4 ; rm(REC2.4)
-
-
-#Covariates to initially consider based on the literature and expert opinion (version 1 of study):
-# initial_covs <- c("loc_elev", "StreamOrder", "seg_ro_mm", "FWENZ_SegRipShade", "MeanFlowCumecs", "FWENZ_segSubstrate",
-#               "FWENZ_DSDamAffected","local_twarm") #Average within section mean January air temperature. deg C x10
 
 #Large set of covariates indentified in previous research as being important and through expert opinion
 initial_covs <- c("Dist2Coast", "StreamOrder", "sinuosity", "segslpmean", "seg_ro_mm", "FWENZ_usHard",
@@ -94,10 +86,6 @@ colnames(network)
 
 #Check missing
 sapply(1:ncol(network), function(x) length(which(is.na(network[,x])))/nrow(network))
-
-# #Remove NAs from network
-# anyNA(network)
-# sapply(1:ncol(network), function(x) length(which(is.na(network[,x])))/nrow(network)) #0 missing all columns
 
 
 

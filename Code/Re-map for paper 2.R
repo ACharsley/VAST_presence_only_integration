@@ -44,7 +44,8 @@ network_type <- "full"
 SE_switch <- "SE_off"
 
 #scenario <- "Taranaki data" #"1a" "1b" "2a" "2b" "3a" "3b" "4a" "4b"
-scenario <- c("Taranaki data", "1a", "1b", "2a", "2b", "3a", "3b", "4a", "4b")
+#scenario <- c("Taranaki data", "1a", "1b", "2a", "2b", "3a", "3b", "4a", "4b")
+scenario <- c("Taranaki data", "1a", "2a", "3a", "3b", "4a")
 
 print(scenario)
 
@@ -142,7 +143,8 @@ l2 <- lapply(1:nrow(Network_sz_EN), function(x){
 l2 <- do.call(rbind, l2)
 
 
-scenario_new <- c("struc_only", "1a", "1b", "2a", "2b", "3a", "3b", "4a", "4b")
+#scenario_new <- c("struc_only", "1a", "1b", "2a", "2b", "3a", "3b", "4a", "4b")
+scenario_new <- c("struc_only", "1a", "2a", "3a", "3b", "4a")
 zlim_inp <- c(0, round_any(max(POE_upper_lim), 0.1, f=ceiling))
 
 
@@ -177,15 +179,15 @@ for (sce in scenario_new) { #sce = "struc_only"
           axis.text.x = element_text(angle = 90, size = rel(1)),
           axis.text.y = element_text(size = rel(1)),
           legend.text=element_text(size = rel(1.1))) +
-    xlab("Longitude") + ylab("Latitude")
+    xlab("Longitude (°E)") + ylab("Latitude (°N)")
   
   if(sce != "struc_only"){ 
     
-    labels = c("Unstructured data",
-               "Random generation (Equal)", "Random generation (5x)",
-               "At unsuitable habitat (Equal)", "At unsuitable habitat (5x)",
-               "Near roads (Equal)", "Near roads (5x)",
-               "At unsuitable habitat and near roads (Equal)", "At unsuitable habitat and near roads (5x)")
+    # labels = c("Unstructured data",
+    #            "Random generation (1n)", "Random generation (5n)",
+    #            "At unsuitable habitat (1n)", "At unsuitable habitat (5n)",
+    #            "Near roads (1n)", "Near roads (5n)",
+    #            "At unsuitable habitat and near roads (1n)", "At unsuitable habitat and near roads (5n)")
     
     p <- p + 
       theme(legend.key.size = unit(1.5, "cm"), 
@@ -228,27 +230,31 @@ dir.create(res_dir, showWarnings = F)
 
 ggsave(file.path(res_dir, "POE_2022_struc_only.png"), Catchment_plot_struc_only, width=8,height=8)
 
-catchmaps <- ggarrange(Catchment_plot_1a + rremove("xlab") + rremove("x.text") + rremove("x.ticks"),
-                       Catchment_plot_1b + rremove("xylab") + rremove("xy.text") + rremove("y.ticks") + rremove("x.ticks"),
-                       Catchment_plot_2a + rremove("xlab") + rremove("x.text") + rremove("x.ticks"),
-                       Catchment_plot_2b + rremove("xylab") + rremove("xy.text") + rremove("y.ticks") + rremove("x.ticks"),
+ggsave(file.path(res_dir, "POE_2022_random_1n.png"), Catchment_plot_1a, width=8,height=8)
+
+ggsave(file.path(res_dir, "POE_2022_unsuitable_hab_1n.png"), Catchment_plot_2a, width=8,height=8)
+
+ggsave(file.path(res_dir, "POE_2022_near_roads_1n.png"), Catchment_plot_3a, width=8,height=8)
+ggsave(file.path(res_dir, "POE_2022_near_roads_5n.png"), Catchment_plot_3b, width=8,height=8)
+
+ggsave(file.path(res_dir, "POE_2022_unsuitable_hab_near_roads_1n.png"), Catchment_plot_4a, width=8,height=8)
+
+catchmaps <- ggarrange(Catchment_plot_struc_only + rremove("xlab") + rremove("x.text") + rremove("x.ticks"),
+                       Catchment_plot_1a + rremove("xylab") + rremove("xy.text") + rremove("y.ticks") + rremove("x.ticks"),
                        Catchment_plot_3a + rremove("xlab") + rremove("x.text") + rremove("x.ticks"),
                        Catchment_plot_3b + rremove("xylab") + rremove("xy.text") + rremove("y.ticks") + rremove("x.ticks"),
-                       Catchment_plot_4a,
-                       Catchment_plot_4b + rremove("ylab") + rremove("y.text") + rremove("y.ticks"),
-                       labels = c("Random generation (Equal)", "Random generation (5x)",
-                                  "At unsuitable habitat (Equal)", "At unsuitable habitat (5x)",
-                                  "Near roads (Equal)", "Near roads (5x)",
-                                  "At unsuitable habitat and\n    near roads (Equal)", "At unsuitable habitat and\n      near roads (5x)"),
-                       label.x = c(0.02,-0.095,
-                                   0.01,-0.12,
+                       Catchment_plot_2a,
+                       Catchment_plot_4a + rremove("ylab") + rremove("y.text") + rremove("y.ticks"),
+                       labels = c("Structured data only", "Random generation (1n)",
+                                  "Near roads (1n)", "Near roads (5n)",
+                                  "At unsuitable habitat (1n)", "At unsuitable habitat and\n    near roads (1n)"),
+                       label.x = c(0.05,-0.095,
                                    0.09,-0.04,
-                                   #-0.15,-0.3
-                                   0.05,-0.11),
-                       label.y = c(0.98,0.98,0.98,0.98,0.98,0.98,0.99,0.99),
+                                   0.05,-0.12),
+                       label.y = c(0.98,0.98,0.98,0.98,0.98,0.98),
                        font.label = list(size = 16),
                        #align = "hv",
-                       ncol = 2, nrow = 4,
+                       ncol = 2, nrow = 3,
                        widths = c(1.2,1), heights = c(1,1,1,1.3), 
                        common.legend = TRUE, legend = "right")
 

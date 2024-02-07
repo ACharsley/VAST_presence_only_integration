@@ -88,17 +88,21 @@ source(paste0(getwd(), "/Code/funcs.R"))
 #          "3d",
 #               "4a", "4b", "4c", "4d")
 sce <-   c("Taranaki data",
-           "1a", "1b", "1c", 
-           #"1d", #failed model
-           "2a", "2b", 
-           #"2c", "2d", #failed model
-           "3a", "3b", 
-           #"3c", # All CVs failed but two.
-           #"3d", #failed model
-           "4a", "4b"#, 
-           #"4c", # All CVs failed.
-           #"4d" # All CVs failed but three.
-           )
+           "1a", 
+           #"1b", #strange result
+           #"1c","1d", # Both worked but currently not Cross validated and results look strange
+           "2a", 
+           #"2b", #strange result
+           #"2c","2d", #failed model
+           "3a", 
+           "3b", #strange result
+           #"3c", #failed model
+           #"3d", #Worked but currently not Cross validated and results look strange
+           "4a"
+           #, "4b", # Model failed
+           # "4c",  #worked but currently not Cross validated and ...
+           #"4d" # Model failed
+)
 
 network_type <- "full"
 

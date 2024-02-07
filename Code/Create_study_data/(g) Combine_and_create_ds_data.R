@@ -70,11 +70,11 @@ Sample_1c <- readRDS(file.path(pseudoabsence_data_dir, "Sample_1c.rds"))
 #d.
 Sample_1d <- readRDS(file.path(pseudoabsence_data_dir, "Sample_1d.rds"))
 
-#OM - a.
-Sample_OM_1a <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_1a.rds"))
-
-#OM - b.
-Sample_OM_1b <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_1b.rds"))
+# #OM - a.
+# Sample_OM_1a <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_1a.rds"))
+# 
+# #OM - b.
+# Sample_OM_1b <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_1b.rds"))
 ####
 
 
@@ -91,11 +91,11 @@ Sample_2c <- readRDS(file.path(pseudoabsence_data_dir, "Sample_2c.rds"))
 #d.
 Sample_2d <- readRDS(file.path(pseudoabsence_data_dir, "Sample_2d.rds"))
 
-#OM - a.
-Sample_OM_2a <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_2a.rds"))
-
-#OM - b.
-Sample_OM_2b <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_2b.rds"))
+# #OM - a.
+# Sample_OM_2a <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_2a.rds"))
+# 
+# #OM - b.
+# Sample_OM_2b <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_2b.rds"))
 ####
 
 
@@ -112,11 +112,11 @@ Sample_3c <- readRDS(file.path(pseudoabsence_data_dir, "Sample_3c.rds"))
 #d.
 Sample_3d <- readRDS(file.path(pseudoabsence_data_dir, "Sample_3d.rds"))
 
-#OM - a.
-Sample_OM_3a <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_3a.rds"))
-
-#OM - b.
-Sample_OM_3b <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_3b.rds"))
+# #OM - a.
+# Sample_OM_3a <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_3a.rds"))
+# 
+# #OM - b.
+# Sample_OM_3b <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_3b.rds"))
 ####
 
 
@@ -133,13 +133,12 @@ Sample_4c <- readRDS(file.path(pseudoabsence_data_dir, "Sample_4c.rds"))
 #d.
 Sample_4d <- readRDS(file.path(pseudoabsence_data_dir, "Sample_4d.rds"))
 
-#OM - a.
-Sample_OM_4a <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_4a.rds"))
-
-#OM - b.
-Sample_OM_4b <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_4b.rds"))
+# #OM - a.
+# Sample_OM_4a <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_4a.rds"))
+# 
+# #OM - b.
+# Sample_OM_4b <- readRDS(file.path(pseudoabsence_data_dir, "Sample_OM_4b.rds"))
 ####
-
 
 
 ######################
@@ -177,17 +176,17 @@ Taranaki_data_1d$network <- network
 Taranaki_data_1d$covariate_df <- covariate_df
 Taranaki_data_1d$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_1d)
 
-#OM - a.
-Taranaki_data_OM_1a <- list()
-Taranaki_data_OM_1a$network <- network
-Taranaki_data_OM_1a$covariate_df <- covariate_df
-Taranaki_data_OM_1a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_1a)
-
-#OM - b.
-Taranaki_data_OM_1b <- list()
-Taranaki_data_OM_1b$network <- network
-Taranaki_data_OM_1b$covariate_df <- covariate_df
-Taranaki_data_OM_1b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_1b)
+# #OM - a.
+# Taranaki_data_OM_1a <- list()
+# Taranaki_data_OM_1a$network <- network
+# Taranaki_data_OM_1a$covariate_df <- covariate_df
+# Taranaki_data_OM_1a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_1a)
+# 
+# #OM - b.
+# Taranaki_data_OM_1b <- list()
+# Taranaki_data_OM_1b$network <- network
+# Taranaki_data_OM_1b$covariate_df <- covariate_df
+# Taranaki_data_OM_1b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_1b)
 
 
 #Randomly generated data at locations with unsuitable longfin eel habitat
@@ -215,17 +214,17 @@ Taranaki_data_2d$network <- network
 Taranaki_data_2d$covariate_df <- covariate_df
 Taranaki_data_2d$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_2d)
 
-#OM - a.
-Taranaki_data_OM_2a <- list()
-Taranaki_data_OM_2a$network <- network
-Taranaki_data_OM_2a$covariate_df <- covariate_df
-Taranaki_data_OM_2a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_2a)
-
-#OM - b.
-Taranaki_data_OM_2b <- list()
-Taranaki_data_OM_2b$network <- network
-Taranaki_data_OM_2b$covariate_df <- covariate_df
-Taranaki_data_OM_2b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_2b)
+# #OM - a.
+# Taranaki_data_OM_2a <- list()
+# Taranaki_data_OM_2a$network <- network
+# Taranaki_data_OM_2a$covariate_df <- covariate_df
+# Taranaki_data_OM_2a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_2a)
+# 
+# #OM - b.
+# Taranaki_data_OM_2b <- list()
+# Taranaki_data_OM_2b$network <- network
+# Taranaki_data_OM_2b$covariate_df <- covariate_df
+# Taranaki_data_OM_2b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_2b)
 
 
 #Randomly generated data at locations within 2km of a registered road
@@ -253,17 +252,17 @@ Taranaki_data_3d$network <- network
 Taranaki_data_3d$covariate_df <- covariate_df
 Taranaki_data_3d$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_3d)
 
-#OM - a.
-Taranaki_data_OM_3a <- list()
-Taranaki_data_OM_3a$network <- network
-Taranaki_data_OM_3a$covariate_df <- covariate_df
-Taranaki_data_OM_3a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_3a)
-
-#OM - b.
-Taranaki_data_OM_3b <- list()
-Taranaki_data_OM_3b$network <- network
-Taranaki_data_OM_3b$covariate_df <- covariate_df
-Taranaki_data_OM_3b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_3b)
+# #OM - a.
+# Taranaki_data_OM_3a <- list()
+# Taranaki_data_OM_3a$network <- network
+# Taranaki_data_OM_3a$covariate_df <- covariate_df
+# Taranaki_data_OM_3a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_3a)
+# 
+# #OM - b.
+# Taranaki_data_OM_3b <- list()
+# Taranaki_data_OM_3b$network <- network
+# Taranaki_data_OM_3b$covariate_df <- covariate_df
+# Taranaki_data_OM_3b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_3b)
 
 
 #Randomly generated data at locations within 2km of a registered road and with unsuitable longfin eel habitat
@@ -291,17 +290,17 @@ Taranaki_data_4d$network <- network
 Taranaki_data_4d$covariate_df <- covariate_df
 Taranaki_data_4d$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_4d)
 
-#OM - a.
-Taranaki_data_OM_4a <- list()
-Taranaki_data_OM_4a$network <- network
-Taranaki_data_OM_4a$covariate_df <- covariate_df
-Taranaki_data_OM_4a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_4a)
-
-#OM - b.
-Taranaki_data_OM_4b <- list()
-Taranaki_data_OM_4b$network <- network
-Taranaki_data_OM_4b$covariate_df <- covariate_df
-Taranaki_data_OM_4b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_4b)
+# #OM - a.
+# Taranaki_data_OM_4a <- list()
+# Taranaki_data_OM_4a$network <- network
+# Taranaki_data_OM_4a$covariate_df <- covariate_df
+# Taranaki_data_OM_4a$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_4a)
+# 
+# #OM - b.
+# Taranaki_data_OM_4b <- list()
+# Taranaki_data_OM_4b$network <- network
+# Taranaki_data_OM_4b$covariate_df <- covariate_df
+# Taranaki_data_OM_4b$obs <- rbind(NZFFD_data, encounter_only_lf_data, Sample_OM_4b)
 
 
 
@@ -318,8 +317,8 @@ Taranaki_data_1b_with_ds <- create_ds_data(Taranaki_data_1b)
 Taranaki_data_1c_with_ds <- create_ds_data(Taranaki_data_1c)
 Taranaki_data_1d_with_ds <- create_ds_data(Taranaki_data_1d)
 
-Taranaki_data_OM_1a_with_ds <- create_ds_data(Taranaki_data_OM_1a)
-Taranaki_data_OM_1b_with_ds <- create_ds_data(Taranaki_data_OM_1b)
+# Taranaki_data_OM_1a_with_ds <- create_ds_data(Taranaki_data_OM_1a)
+# Taranaki_data_OM_1b_with_ds <- create_ds_data(Taranaki_data_OM_1b)
 
 
 #Randomly generated data at locations with unsuitable longfin eel habitat
@@ -328,8 +327,8 @@ Taranaki_data_2b_with_ds <- create_ds_data(Taranaki_data_2b)
 Taranaki_data_2c_with_ds <- create_ds_data(Taranaki_data_2c)
 Taranaki_data_2d_with_ds <- create_ds_data(Taranaki_data_2d)
 
-Taranaki_data_OM_2a_with_ds <- create_ds_data(Taranaki_data_OM_2a)
-Taranaki_data_OM_2b_with_ds <- create_ds_data(Taranaki_data_OM_2b)
+# Taranaki_data_OM_2a_with_ds <- create_ds_data(Taranaki_data_OM_2a)
+# Taranaki_data_OM_2b_with_ds <- create_ds_data(Taranaki_data_OM_2b)
 
 
 #Randomly generated data at locations within 2km of a registered road
@@ -338,8 +337,8 @@ Taranaki_data_3b_with_ds <- create_ds_data(Taranaki_data_3b)
 Taranaki_data_3c_with_ds <- create_ds_data(Taranaki_data_3c)
 Taranaki_data_3d_with_ds <- create_ds_data(Taranaki_data_3d)
 
-Taranaki_data_OM_3a_with_ds <- create_ds_data(Taranaki_data_OM_3a)
-Taranaki_data_OM_3b_with_ds <- create_ds_data(Taranaki_data_OM_3b)
+# Taranaki_data_OM_3a_with_ds <- create_ds_data(Taranaki_data_OM_3a)
+# Taranaki_data_OM_3b_with_ds <- create_ds_data(Taranaki_data_OM_3b)
 
 
 #Randomly generated data at locations within 2km of a registered road and with unsuitable longfin eel habitat
@@ -348,8 +347,8 @@ Taranaki_data_4b_with_ds <- create_ds_data(Taranaki_data_4b)
 Taranaki_data_4c_with_ds <- create_ds_data(Taranaki_data_4c)
 Taranaki_data_4d_with_ds <- create_ds_data(Taranaki_data_4d)
 
-Taranaki_data_OM_4a_with_ds <- create_ds_data(Taranaki_data_OM_4a)
-Taranaki_data_OM_4b_with_ds <- create_ds_data(Taranaki_data_OM_4b)
+# Taranaki_data_OM_4a_with_ds <- create_ds_data(Taranaki_data_OM_4a)
+# Taranaki_data_OM_4b_with_ds <- create_ds_data(Taranaki_data_OM_4b)
 
 
 
@@ -366,8 +365,8 @@ saveRDS(Taranaki_data_1b_with_ds, file=file.path(data_taranaki_dir, "Taranaki_da
 saveRDS(Taranaki_data_1c_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_1c.rds"))
 saveRDS(Taranaki_data_1d_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_1d.rds"))
 
-saveRDS(Taranaki_data_OM_1a_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_1a.rds"))
-saveRDS(Taranaki_data_OM_1b_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_1b.rds"))
+# saveRDS(Taranaki_data_OM_1a_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_1a.rds"))
+# saveRDS(Taranaki_data_OM_1b_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_1b.rds"))
 
 
 #Randomly generated data at locations with unsuitable longfin eel habitat
@@ -376,8 +375,8 @@ saveRDS(Taranaki_data_2b_with_ds, file=file.path(data_taranaki_dir, "Taranaki_da
 saveRDS(Taranaki_data_2c_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_2c.rds"))
 saveRDS(Taranaki_data_2d_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_2d.rds"))
 
-saveRDS(Taranaki_data_OM_2a_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_2a.rds"))
-saveRDS(Taranaki_data_OM_2b_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_2b.rds"))
+# saveRDS(Taranaki_data_OM_2a_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_2a.rds"))
+# saveRDS(Taranaki_data_OM_2b_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_2b.rds"))
 
 
 #Randomly generated data at locations within 2km of a registered road
@@ -386,8 +385,8 @@ saveRDS(Taranaki_data_3b_with_ds, file=file.path(data_taranaki_dir, "Taranaki_da
 saveRDS(Taranaki_data_3c_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_3c.rds"))
 saveRDS(Taranaki_data_3d_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_3d.rds"))
 
-saveRDS(Taranaki_data_OM_3a_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_3a.rds"))
-saveRDS(Taranaki_data_OM_3b_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_3b.rds"))
+# saveRDS(Taranaki_data_OM_3a_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_3a.rds"))
+# saveRDS(Taranaki_data_OM_3b_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_3b.rds"))
 
 
 #Randomly generated data at locations within 2km of a registered road and with unsuitable longfin eel habitat
@@ -396,55 +395,6 @@ saveRDS(Taranaki_data_4b_with_ds, file=file.path(data_taranaki_dir, "Taranaki_da
 saveRDS(Taranaki_data_4c_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_4c.rds"))
 saveRDS(Taranaki_data_4d_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_4d.rds"))
 
-saveRDS(Taranaki_data_OM_4a_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_4a.rds"))
-saveRDS(Taranaki_data_OM_4b_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_4b.rds"))
+# saveRDS(Taranaki_data_OM_4a_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_4a.rds"))
+# saveRDS(Taranaki_data_OM_4b_with_ds, file=file.path(data_taranaki_dir, "Taranaki_data_OM_4b.rds"))
 
-
-
-# #######################
-# # Plot covariate data #
-# #######################
-# 
-# #Covariates
-# # covariate_names <- c("std_log_loc_elev", #Elevation
-# #                      "std_FWENZ_SegRipShade", #riparian shade
-# #                      "std_log_MeanFlowCumecs", #mean flow in cumecs
-# #                      "std_FWENZ_segSubstrate", #river substrate
-# #                      "std_local_twarm", #average January temperature
-# #                      "std_Years_since_barrier", #years since barrier installed
-# #                      "Barrier_present" #barrier present
-# # )
-# covariate_names <- c("std_Dist2Coast")
-# 
-# for(cov in covariate_names){# cov = "loc_elev"
-#   
-#   data_to_plot <- Taranaki_data_with_ds$covariate_df_ds %>%
-#     mutate("Covariate" = Taranaki_data_with_ds$covariate_df_ds[,cov])
-#   
-#   if(cov %in% c("std_Years_since_barrier", "Barrier_present")){
-#     
-#     catchmap1 <- ggplot(data_to_plot) +
-#       geom_point(aes(x = Lon, y = Lat, col=Covariate), alpha=0.6) +
-#       facet_wrap(~Year) +
-#       scale_colour_distiller(palette = "RdYlGn") +
-#       xlab("Longitude") + ylab("Latitude") +
-#       ggtitle(paste0("Catchment map of ", cov)) + 
-#       #theme_bw(base_size = 14)
-#       theme(axis.text.x=element_text(angle = 90, vjust = 0.5, hjust=1, size=8),
-#             axis.text.y=element_text(size=6))
-#     ggsave(file.path(covariate_plot_dir, paste0("Final_covariate_map_ds - ", cov,".png")), catchmap1)
-#     
-#   }else{
-#     
-#     catchmap2 <- ggplot(data_to_plot) +
-#       geom_point(aes(x = Lon, y = Lat, col=Covariate), alpha=0.6) +
-#       scale_colour_distiller(palette = "RdYlGn") +
-#       xlab("Longitude") + ylab("Latitude") +
-#       ggtitle(paste0("Catchment map of ", cov)) + 
-#       theme_bw(base_size = 14)
-#     ggsave(file.path(covariate_plot_dir, paste0("Final_covariate_map_ds - ", cov,".png")), catchmap2)
-#     
-#   }
-#   
-# }
-# 

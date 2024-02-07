@@ -721,7 +721,7 @@ plot_maps_network <-
               # guides(color=guide_legend(title=plot_codes[plot_num])) +
               facet_wrap(~year) + 
               mytheme() +
-              xlab("Longitude") + ylab("Latitude")
+              xlab("Longitude (°E)") + ylab("Latitude (°N)")
             
             #if(is.null(PlotName)){PlotName=plot_names[plot_num]}
             
@@ -806,7 +806,7 @@ plot_maps_network <-
                 # guides(color=guide_legend(title=plot_codes[plot_num])) +
                 facet_wrap(~category) + 
                 mytheme() +
-                xlab("Longitude") + ylab("Latitude")
+                xlab("Longitude (°E)") + ylab("Latitude (°N)")
               
               width = 10; height = 5
               
@@ -823,7 +823,7 @@ plot_maps_network <-
                 # guides(color=guide_legend(title=plot_codes[plot_num])) +
                 #facet_wrap(~category) + 
                 mytheme() +
-                xlab("Longitude") + ylab("Latitude")
+                xlab("Longitude (°E)") + ylab("Latitude (°N)")
               
               width = 6; height = 5
               

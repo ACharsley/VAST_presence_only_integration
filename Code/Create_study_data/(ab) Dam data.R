@@ -31,24 +31,6 @@ network$DSDamAffected <- factor(network$DSDamAffected)
 dam_data <- read_excel(file.path(raw_data_dir, "latest_dams2004.xls"))
 
 #Convert northing/easting data to lat/long
-
-# ## function to calculate latitude and longitude from eastings and northings
-# calc_NZ_latlon <- function(northing, easting){
-#   #proj4string <- "+proj=tmerc +lat_0=0.0 +lon_0=173.0 +k=0.9996 +x_0=1600000.0 +y_0=10000000.0 +datum=WGS84 +units=m"
-#   proj4string <- "+proj=nzmg +lat_0=-41 +lon_0=173 +x_0=2510000 +y_0=6023150 +ellps=intl +datum=nzgd49 +units=m +towgs84=59.47,-5.04,187.44,0.47,-0.1,1.024,-4.5993 +nadgrids=nzgd2kgrid0005.gsb +no_defs"
-#   p <- project(matrix(c(easting, northing),nrow=1, ncol=2), proj=proj4string, inv=T)
-#   colnames(p) <- c('long', 'lat')
-#   return(p)
-# }
-# 
-# ## latitude and longitude for child nodes in network
-# dam_ll <- lapply(1:nrow(dam_data), function(x){
-#   p <- calc_NZ_latlon(northing = dam_data$NORTHING[x], easting = dam_data$EASTING[x])
-#   return(p)
-# })
-# dam_ll <- do.call(rbind, dam_ll)
-# dam_data_full <- cbind.data.frame(dam_data, dam_ll)
-
 #Projection info needed
 proj_latlong <- CRS("+init=epsg:4326")
 proj_XY <- "+init=epsg:2193"

@@ -226,8 +226,8 @@ summary((hab_REC_full$FWENZ_SegRipShade)^2) #mean and median much closer using s
 summary(log(hab_REC_full$MeanFlowCumecs)) #mean and median much closer now
 # hist(log(hab_REC_full$MeanFlowCumecs)) #log does the best job
 
-# I will leave local_twarm as is because the skew is mostly due to a few extreme values (that are possible and therefore not
-# outliers)
+# I will leave local_twarm as is because the skew is mostly due to the outliers that were removed
+
 
 
 #Perform transformation
@@ -524,15 +524,6 @@ abs(cor(covariate_df[,covars_all])) > 0.7
 # std_log_loc_elev and std_local_twarm: -0.7528922
 # std_Years_since_barrier and Barrier_present: 0.78597148
 
-
-# Will remove std_log_loc_elev, as std_local_twarm is biologically relevant and important for future modelling.
-# Also high correlation to dist2coast so a lot of the information stored in this variable too. Note: It is also
-# important to remove elevation because when I restrict the data to only NZFFD (GAMs and HSI models) the correlation
-# increase to close to 0.9.
-
-#covariate_df <- covariate_df %>% select(-c("std_log_loc_elev"))
-
-## Version 2: 
 ## The first GAM runs were run with local_twarm instead of elevation, I then re-ran with elevation instead of local_twarm and the 
 ## GAM found elevation to be important as well as distance to coast. Therefore, I will use these two variables in VAST. In addition,
 ## there is literature that supports the use of elevation

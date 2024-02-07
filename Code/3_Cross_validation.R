@@ -25,7 +25,7 @@ library(VAST)
 #  Directories  #
 #################
 
-model_path <- paste0(getwd(), "/Models") #only want to CV these models
+model_path <- paste0(getwd(), "/Models")
 
 ####################
 #  Call functions  #

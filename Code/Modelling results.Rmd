@@ -24,9 +24,9 @@ model_path <- "C:/Users/charsleyar/OneDrive - NIWA/PhD_stuff/Projects/VAST_prese
 ```{r Model_output_table_setup, include=FALSE, echo=FALSE}
 # Scenarios
 scenarios <- c("Structured data only",
-              "1a", "1b", "1c", "1d",  #1d model failed
+              "1a", "1b", "1c", "1d",  
               "2a", "2b", "2c", "2d",
-              "3a", "3b", "3c", "3d", #3c model failed
+              "3a", "3b", "3c", "3d",
               "4a", "4b", "4c", "4d")
 
 PA_sample_sizes <- c("NA", rep(c("n", "5n", "10n", "20n"), 4))
@@ -101,7 +101,18 @@ kable(model_output_df, caption="Parameter estimates, standard errors, and model 
 ```{r Cross_validation_table_setup, echo=FALSE}
 CV_table_df <- data.frame("Scenario"=scenarios, "PA_sample_size" = PA_sample_sizes)
 
-for(sce in scenarios){
+scenarios_to_loop <- c("Structured data only",
+              "1a", 
+              #"1b", "1c", "1d",  
+              "2a", 
+              #"2b", "2c", "2d",
+              "3a", "3b", 
+              #"3c", "3d",
+              "4a"
+              #, "4b", "4c", "4d")
+)
+
+for(sce in scenarios_to_loop){
   
   if(sce == "Structured data only"){
     path <- file.path(model_path, paste0("Taranaki_data_model"))

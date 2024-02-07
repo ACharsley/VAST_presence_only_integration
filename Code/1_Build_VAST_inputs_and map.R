@@ -36,11 +36,11 @@ dir.create(VAST_input_data_dir, showWarnings = F)
 #################################
 
 scenarios <- c("Taranaki data", 
-               "1a", "1b", "1c", "1d", "OM_1a", "OM_1b",
-               "2a", "2b", "2c", "2d", "OM_2a", "OM_2b",
-               "3a", "3b", "3c", "3d", "OM_3a", "OM_3b",
-               "4a", "4b", "4c", "4d", "OM_4a", "OM_4b")
-network_type <- "full" #"downstream"
+               "1a", "1b", "1c", "1d", #"OM_1a", "OM_1b",
+               "2a", "2b", "2c", "2d", #"OM_2a", "OM_2b",
+               "3a", "3b", "3c", "3d", #"OM_3a", "OM_3b",
+               "4a", "4b", "4c", "4d") #"OM_4a", "OM_4b")
+network_type <- "full"
 
 VAST_input_data <- list()
 
@@ -154,7 +154,7 @@ if(network_type == "full"){
 
 #re-load data if needed
 #VAST_input_data <- readRDS(file.path(VAST_input_data_dir, "VAST_input_data.rds"))
-
+#network_type = "full"
 
 
 #########
@@ -164,6 +164,15 @@ if(network_type == "full"){
 Data_to_plot <- VAST_input_data[["1a"]]$Data_Geostat
 Data_to_plot$present <- ifelse(round(Data_to_plot$Catch_KG)==1, "Encounter", "Non-encounter")
 
+
+if(network_type == "downstream"){
+  network <- VAST_input_data[["1a"]]$network_ds
+}
+if(network_type == "full"){
+  network <- VAST_input_data[["1a"]]$network
+}
+
+
 ## Load full network for plots
 netfull <- readRDS(file.path(raw_data_dir, "NZ_network.rds"))
 
@@ -171,7 +180,7 @@ netfull <- readRDS(file.path(raw_data_dir, "NZ_network.rds"))
 nzmap <- ggplot() +
   geom_point(data = netfull, aes(x = long, y = lat), pch = ".") +
   geom_point(data = network, aes(x = Lon, y = Lat), color = "red", pch = ".") +
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   theme_bw(base_size = 14)
 
 if(network_type == "downstream"){
@@ -224,7 +233,7 @@ catchmap <- ggplot(Data_to_plot_no_pseudo_absences) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = present), alpha = 0.6) +
   facet_wrap(.~Year) +
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("Longfin eel NZFFD encounter/non-encounter observations by year") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   scale_colour_manual(values = c("#E41A1C", "chartreuse4")) +
@@ -243,340 +252,52 @@ catchmap <- catchmap +geom_text(
 ggsave(file.path(fig_dir, "Taranaki_lf_observations_byYear.png"), catchmap, height = 12, width = 15)
 
 
+## Have commented out as it takes ages to run! #
+
 ## Now plot with pseudo-absences - loop over all scenarios ##
-for(sce in scenarios){
-  
-  print(sce)
-  
-  Data_to_plot <- VAST_input_data[[sce]]$Data_Geostat
-  Data_to_plot$present <- ifelse(round(Data_to_plot$Catch_KG)==1, "Present", "Absent")
-  
-  
-  #Taranaki network by year
-  tab <- table(Data_to_plot$present, Data_to_plot$Year)
-  years <- unique(Data_to_plot$Year)[order(unique(Data_to_plot$Year))]
-  data_text <- data.frame("Year"= years, label=paste0(tab[1,], "/", tab[2,]),
-                          #x=174, y=-39.8
-                          x=174, y=-38.8)
-  
-  
-  catchmap <- ggplot(Data_to_plot) +
-    geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-    geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
-    geom_point(aes(x = Lon, y = Lat, col = present), alpha = 0.6) +
-    facet_wrap(.~Year) +
-    xlab("Longitude") + ylab("Latitude") +
-    #ggtitle("Longfin eel NZFFD encounter/non-encounter observations by year") +
-    guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
-    scale_colour_manual(values = c("#E41A1C", "chartreuse4")) +
-    theme_bw(base_size = 14) +
-    theme(axis.text = element_text(size = rel(1)),
-          axis.title=element_text(size = rel(1.5),face="bold"),
-          axis.text.x = element_text(angle = 90),
-          legend.text=element_text(size = rel(1)))
-  
-  catchmap <- catchmap +geom_text(
-    data = data_text,
-    mapping = aes(x = x, y = y, label = label),  
-    size=5
-  )
-  
-  ggsave(file.path(fig_dir, paste0("Taranaki_lf_observations_byYear_",sce,".png")), catchmap, height = 12, width = 15)
-  
-  
-  rm(Data_to_plot)
-  
-}
-
-
-
-
-# ###################################################
-# 
-# # Taranaki catchment
-# 
-# l2 <- lapply(1:nrow(network), function(x){
-#   parent <- network$parent_s[x]
-#   find <- network %>% filter(child_s == parent)
-#   if(nrow(find)>0) out <- cbind.data.frame(network[x,], 'Lon2'=find$Lon, 'Lat2'=find$Lat)
-#   if(nrow(find)==0) out <- cbind.data.frame(network[x,], 'Lon2'=NA, 'Lat2'=NA)
+# for(sce in scenarios){
 #   
-#   return(out)
-# })
-# l2 <- do.call(rbind, l2)
-# 
-# 
-# catchmap2 <- ggplot(Data_to_plot) +
-#   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-#   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
-#   geom_point(aes(x = Lon, y = Lat, col = encounter), size=3, alpha = 0.6) +
-#   xlab("Longitude") + ylab("Latitude") +
-#   ggtitle("Longfin eel NZFFD encounter/non-encounter observations") +
-#   guides(color = guide_legend(title = "")) +
-#   scale_colour_manual(values = c("#E41A1C", "#377EB8")) +
-#   theme_bw(base_size = 14) +
-#   theme(axis.text = element_text(size = rel(0.8)))
-# 
-# ggsave(file.path(fig_dir, "Taranaki_lf_observations.png"), catchmap2, height = 12, width = 15)
-# 
-# 
-# 
-# ############################
-# # Plot encounter-only data #
-# ############################
-# 
-# Data_to_plot_eo <- NZFFD_eo
-# Data_to_plot_eo$present <- ifelse(round(Data_to_plot_eo$`Anguilla dieffenbachii`)==1, "Encounter", "Non-encounter")
-# 
-# #Load network data
-# network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
-# 
-# #Taranaki network by year
-# tab <- table(Data_to_plot_eo$present, Data_to_plot_eo$Year)
-# years <- unique(Data_to_plot_eo$Year)[order(unique(Data_to_plot_eo$Year))]
-# data_text <- data.frame("Year"= years, label=tab[1,],
-#                         x=174, y=-39.8)
-# 
-# 
-# catchmap <- ggplot(Data_to_plot_eo) +
-#   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-#   geom_point(aes(x = Lon, y = Lat, col = present), alpha = 0.6) +
-#   facet_wrap(.~Year) +
-#   xlab("Longitude") + ylab("Latitude") +
-#   ggtitle("Longfin eel NZFFD encounter-only observations by year") +
-#   guides(color = guide_legend(title = "")) +
-#   scale_colour_manual(values = "#E41A1C") +
-#   theme_bw(base_size = 14) +
-#   theme(axis.text = element_text(size = rel(0.5)),
-#         axis.text.x = element_text(angle = 90))
-# 
-# catchmap <- catchmap +geom_text(
-#   data = data_text,
-#   mapping = aes(x = x, y = y, label = label)
-# )
-# 
-# ggsave(file.path(fig_dir, "Taranaki_encounter_only_observations_byYear.png"), catchmap, height = 12, width = 15)
-# 
-# 
-# ###################################################
-# 
-# # Taranaki catchment
-# 
-# catchmap2 <- ggplot(Data_to_plot_eo) +
-#   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-#   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
-#   geom_point(aes(x = Lon, y = Lat, col = present), size=3, alpha = 0.6) +
-#   xlab("Longitude") + ylab("Latitude") +
-#   ggtitle("Longfin eel NZFFD encounter-only observations") +
-#   guides(color = guide_legend(title = "")) +
-#   scale_colour_manual(values = "#E41A1C") +
-#   theme_bw(base_size = 14) +
-#   theme(axis.text = element_text(size = rel(0.8)))
-# 
-# ggsave(file.path(fig_dir, "Taranaki_encounter_only_observations.png"), catchmap2, height = 12, width = 15)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# ###################################################
-# #Taranaki network by year
-# tab <- table(Data_to_plot$present, Data_to_plot$Year)
-# years <- unique(Data_to_plot$Year)[order(unique(Data_to_plot$Year))]
-# 
-# data_text <- data.frame("Year"= years, label=paste0(tab[2,], "/", tab[1,]),
-#                         x=174, y=-39.8)
-# 
-# 
-# ## Structured electric fishing data 
-# Data_to_plot_struc_EF <- Data_to_plot %>% filter(Data_source == "Structured_EF")
-# 
-# catchmap_struc_EF <- ggplot(Data_to_plot_struc_EF) +
-#   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-#   geom_point(aes(x = Lon, y = Lat, col = present), alpha = 0.8) +
-#   facet_wrap(.~Year) +
+#   print(sce)
 #   
-#   xlab("Longitude") + ylab("Latitude") +
-#   ggtitle("Longfin eel structured electric fishing data from the NZFFD by year") +
-#   guides(color = guide_legend(title = "")) +
-#   #scale_colour_manual(values = c("#377EB8", "#E41A1C")) +
-#   scale_colour_manual(values = c("green", "#E41A1C")) +
-#   theme_bw(base_size = 14) +
-#   theme(axis.text = element_text(size = rel(0.5)),
-#         axis.text.x = element_text(angle = 90))
-# 
-# catchmap_struc_EF <- catchmap_struc_EF +geom_text(
-#   data = data_text,
-#   mapping = aes(x = x, y = y, label = label)
-# )
-# 
-# if(network_type == "downstream"){
-#   ggsave(file.path(fig_dir, "Taranaki_struc_EF_byYear_ds.png"), catchmap_struc_EF, height = 12, width = 15)
-#   }
-# if(network_type == "full"){
-#   ggsave(file.path(fig_dir, "Taranaki_struc_EF_byYear.png"), catchmap_struc_EF, height = 12, width = 15)
-#   }
-# 
-# 
-# ## Structured Net and Trap data
-# Data_to_plot_struc_NetTrap <- Data_to_plot %>% filter(Data_source == "Structured_NetTrap")
-# 
-# catchmap_struc_NetTrap <- ggplot(Data_to_plot_struc_NetTrap) +
-#   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-#   geom_point(aes(x = Lon, y = Lat, col = present), alpha = 0.8) +
-#   facet_wrap(.~Year) +
+#   Data_to_plot <- VAST_input_data[[sce]]$Data_Geostat
+#   Data_to_plot$present <- ifelse(round(Data_to_plot$Catch_KG)==1, "Present", "Absent")
 #   
-#   xlab("Longitude") + ylab("Latitude") +
-#   ggtitle("Longfin eel structured Net and Trap data from the NZFFD by year") +
-#   guides(color = guide_legend(title = "")) +
-#   #scale_colour_manual(values = c("#377EB8", "#E41A1C")) +
-#   scale_colour_manual(values = c("green", "#E41A1C")) +
-#   theme_bw(base_size = 14) +
-#   theme(axis.text = element_text(size = rel(0.5)),
-#         axis.text.x = element_text(angle = 90))
-# 
-# catchmap_struc_NetTrap <- catchmap_struc_NetTrap +geom_text(
-#   data = data_text,
-#   mapping = aes(x = x, y = y, label = label)
-# )
-# 
-# if(network_type == "downstream"){
-#   ggsave(file.path(fig_dir, "Taranaki_struc_NetTrap_byYear_ds.png"), catchmap_struc_NetTrap, height = 12, width = 15)
-# }
-# if(network_type == "full"){
-#   ggsave(file.path(fig_dir, "Taranaki_struc_NetTrap_byYear.png"), catchmap_struc_NetTrap, height = 12, width = 15)
-# }
-# 
-# 
-# ## Unstructured data
-# Data_to_plot_unstruc <- Data_to_plot %>% filter(Data_source == "Unstructured")
-# Data_to_plot_unstruc <- Data_to_plot_unstruc %>% filter(present == "Encounter")
-# 
-# catchmap_unstruc <- ggplot(Data_to_plot_unstruc) +
-#   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-#   geom_point(aes(x = Lon, y = Lat, col = present), alpha = 0.8) +
-#   facet_wrap(.~Year) +
 #   
-#   xlab("Longitude") + ylab("Latitude") +
-#   ggtitle("Longfin eel unstructured data from the NZFFD by year") +
-#   guides(color = guide_legend(title = "")) +
-#   #scale_colour_manual(values = c("green", "#E41A1C")) +
-#   scale_colour_manual(values = c("green")) +
-#   theme_bw(base_size = 14) +
-#   theme(axis.text = element_text(size = rel(0.5)),
-#         axis.text.x = element_text(angle = 90))
-# 
-# catchmap_unstruc <- catchmap_unstruc +geom_text(
-#   data = data_text,
-#   mapping = aes(x = x, y = y, label = label)
-# )
-# 
-# if(network_type == "downstream"){
-#   ggsave(file.path(fig_dir, "Taranaki_unstruc_byYear_ds.png"), catchmap_unstruc, height = 12, width = 15)
-# }
-# if(network_type == "full"){
-#   ggsave(file.path(fig_dir, "Taranaki_unstruc_byYear.png"), catchmap_unstruc, height = 12, width = 15)
-# }
-# 
-# ###################################################
-# # Taranaki catchment
-# 
-# l2 <- lapply(1:nrow(network), function(x){
-#   parent <- network$parent_s[x]
-#   find <- network %>% filter(child_s == parent)
-#   if(nrow(find)>0) out <- cbind.data.frame(network[x,], 'Lon2'=find$Lon, 'Lat2'=find$Lat)
-#   if(nrow(find)==0) out <- cbind.data.frame(network[x,], 'Lon2'=NA, 'Lat2'=NA)
+#   #Taranaki network by year
+#   tab <- table(Data_to_plot$present, Data_to_plot$Year)
+#   years <- unique(Data_to_plot$Year)[order(unique(Data_to_plot$Year))]
+#   data_text <- data.frame("Year"= years, label=paste0(tab[1,], "/", tab[2,]),
+#                           #x=174, y=-39.8
+#                           x=174, y=-38.8)
 #   
-#   return(out)
-# })
-# l2 <- do.call(rbind, l2)
-# 
-# ## Structured electric fishing data 
-# catchmap_struc_EF_2 <- ggplot(Data_to_plot_struc_EF) +
-#   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-#   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
-#   geom_point(aes(x = Lon, y = Lat, col = present), alpha = 0.8) +
 #   
-#   xlab("Longitude") + ylab("Latitude") +
-#   ggtitle("Longfin eel structured electric fishing data from the NZFFD") +
-#   guides(color = guide_legend(title = "")) +
-#   #scale_colour_manual(values = c("#377EB8", "#E41A1C")) +
-#   scale_colour_manual(values = c("green", "#E41A1C")) +
-#   theme_bw(base_size = 14) +
-#   theme(axis.text = element_text(size = rel(0.5)),
-#         axis.text.x = element_text(angle = 90))
-# 
-# if(network_type == "downstream"){
-#   ggsave(file.path(fig_dir, "Taranaki_struc_EF_ds.png"), catchmap_struc_EF_2, height = 12, width = 15)
-# }
-# if(network_type == "full"){
-#   ggsave(file.path(fig_dir, "Taranaki_struc_EF.png"), catchmap_struc_EF_2, height = 12, width = 15)
-# }
-# 
-# 
-# ## Structured Net and Trap data
-# catchmap_struc_NetTrap_2 <- ggplot(Data_to_plot_struc_NetTrap) +
-#   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-#   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
-#   geom_point(aes(x = Lon, y = Lat, col = present), alpha = 0.8) +
+#   catchmap <- ggplot(Data_to_plot) +
+#     geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
+#     geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
+#     geom_point(aes(x = Lon, y = Lat, col = present), alpha = 0.6) +
+#     facet_wrap(.~Year) +
+#     xlab("Longitude (°E)") + ylab("Latitude (°N)") +
+#     #ggtitle("Longfin eel NZFFD encounter/non-encounter observations by year") +
+#     guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
+#     scale_colour_manual(values = c("#E41A1C", "chartreuse4")) +
+#     theme_bw(base_size = 14) +
+#     theme(axis.text = element_text(size = rel(1)),
+#           axis.title=element_text(size = rel(1.5),face="bold"),
+#           axis.text.x = element_text(angle = 90),
+#           legend.text=element_text(size = rel(1)))
 #   
-#   xlab("Longitude") + ylab("Latitude") +
-#   ggtitle("Longfin eel structured Net and Trap data from the NZFFD") +
-#   guides(color = guide_legend(title = "")) +
-#   #scale_colour_manual(values = c("#377EB8", "#E41A1C")) +
-#   scale_colour_manual(values = c("green", "#E41A1C")) +
-#   theme_bw(base_size = 14) +
-#   theme(axis.text = element_text(size = rel(0.5)),
-#         axis.text.x = element_text(angle = 90))
-# 
-# if(network_type == "downstream"){
-#   ggsave(file.path(fig_dir, "Taranaki_struc_NetTrap_ds.png"), catchmap_struc_NetTrap_2, height = 12, width = 15)
-# }
-# if(network_type == "full"){
-#   ggsave(file.path(fig_dir, "Taranaki_struc_NetTrap.png"), catchmap_struc_NetTrap_2, height = 12, width = 15)
-# }
-# 
-# 
-# ## Unstructured data
-# catchmap_unstruc_2 <- ggplot(Data_to_plot_unstruc) +
-#   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-#   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
-#   geom_point(aes(x = Lon, y = Lat, col = present), alpha = 0.8) +
+#   catchmap <- catchmap +geom_text(
+#     data = data_text,
+#     mapping = aes(x = x, y = y, label = label),  
+#     size=5
+#   )
 #   
-#   xlab("Longitude") + ylab("Latitude") +
-#   ggtitle("Longfin eel unstructured data from the NZFFD") +
-#   guides(color = guide_legend(title = "")) +
-#   #scale_colour_manual(values = c("green", "#E41A1C")) +
-#   scale_colour_manual(values = c("green")) +
-#   theme_bw(base_size = 14) +
-#   theme(axis.text = element_text(size = rel(0.5)),
-#         axis.text.x = element_text(angle = 90))
-# 
-# if(network_type == "downstream"){
-#   ggsave(file.path(fig_dir, "Taranaki_unstruc_ds.png"), catchmap_unstruc_2, height = 12, width = 15)
+#   ggsave(file.path(fig_dir, paste0("Taranaki_lf_observations_byYear_",sce,".png")), catchmap, height = 12, width = 15)
+#   
+#   
+#   rm(Data_to_plot)
+#   
 # }
-# if(network_type == "full"){
-#   ggsave(file.path(fig_dir, "Taranaki_unstruc.png"), catchmap_unstruc_2, height = 12, width = 15)
-# }
-
-###################################################
-###################################################
-
-
-
-
-
-
-
 
 
 
@@ -612,7 +333,7 @@ Data_to_plot <- VAST_input_data$`Taranaki data`$Data_Geostat
 nzmap <- ggplot() +
   geom_point(data = netfull, aes(x = long, y = lat), pch = ".") +
   geom_point(data = network, aes(x = Lon, y = Lat), color = "gray", pch = ".") +
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   theme_bw(base_size = 14)
 
 
@@ -637,7 +358,7 @@ catchmap <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   scale_colour_manual(values = c("#0000a7", "#c1272d")) +
@@ -654,18 +375,26 @@ rm(Data_to_plot) ; rm(catchmap)
 
 ## structured data + unstructured data
 Data_to_plot <- VAST_input_data$`1a`$Data_Geostat #can use any scenario to demonstrate, just need to remove pseudo-absence data
-Data_to_plot <- Data_to_plot %>% filter(!(Data_source == "Unstructured" & Catch_KG == 0))
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Unstructured", "Unstructured_PO", Data_to_plot$Data_source)
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
+                                                  "Pseudo-absence")))
+Data_to_plot <- Data_to_plot %>% filter(!(Data_source == "Pseudo-absence"))
+
+#Arrange data for plotting
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("PO","EF","NetTrap"))
+Data_to_plot <- Data_to_plot %>% arrange(Data_source)
+
 
 catchmap <- ggplot(Data_to_plot) +
   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
-  scale_colour_manual(values = c("#0000a7", "#c1272d", "#eecc16")) +
+  scale_colour_manual(values = c("#eecc16","#0000a7", "#c1272d")) +
   theme_bw(base_size = 14) +
   theme(axis.text = element_text(size = rel(1.5)),
         axis.title=element_text(size = rel(1.5),face="bold"),
@@ -674,6 +403,49 @@ catchmap <- ggplot(Data_to_plot) +
 
 ggsave(file.path(catchment_map_dir, "Catchment_map_all_data.png"), catchmap, height = 12, width = 15)
 
+
+
+
+#NZmap with structured data + unstructured data catchment map
+Data_to_plot <- VAST_input_data$`1a`$Data_Geostat #can use any scenario to demonstrate, just need to remove pseudo-absence data
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Electric fishing",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Net and trap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Presence-only",
+                                                  "Pseudo-absence")))
+Data_to_plot <- Data_to_plot %>% filter(!(Data_source == "Pseudo-absence"))
+
+#Arrange data for plotting
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Presence-only","Electric fishing","Net and trap"))
+Data_to_plot <- Data_to_plot %>% arrange(Data_source)
+
+
+catchmap2 <- ggplot(Data_to_plot) +
+  geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
+  geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
+  geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
+  
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
+  #ggtitle("") +
+  guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
+  scale_colour_manual(values = c("#eecc16","#0000a7", "#c1272d")) +
+  theme_bw(base_size = 14) +
+  theme(axis.text = element_text(size = rel(1.5)),
+        axis.title=element_text(size = rel(1.5),face="bold"),
+        axis.text.x = element_text(angle = 90),
+        legend.text=element_text(size = rel(1.5)))
+
+catchmap_new_legend <- catchmap2 + theme(legend.position = c(.2, .9),
+                                        legend.text=element_text(size = rel(1.2)))
+
+# NZmap_catchmap <- ggarrange(nzmap_taranaki,
+#                             catchmap_new_legend,
+#                             widths = c(1,1))
+NZmap_catchmap <- ggarrange(catchmap_new_legend,
+                            nzmap_taranaki,
+                            widths = c(1,1))
+ggsave(file.path(catchment_map_dir, "NZmap_catchmap.png"), NZmap_catchmap, height = 12, width = 15)
+
+
 ## structured data + unstructured data - yearly
 catchmap <- ggplot(Data_to_plot) +
   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
@@ -681,10 +453,10 @@ catchmap <- ggplot(Data_to_plot) +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   facet_wrap(.~Year) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=14))) + #increase size of point
-  scale_colour_manual(values = c("#0000a7", "#c1272d", "#eecc16")) +
+  scale_colour_manual(values = c("#eecc16","#0000a7", "#c1272d")) +
   theme_bw(base_size = 14) +
   theme(axis.text = element_text(size = rel(1.25)),
         axis.title=element_text(size = rel(1.5),face="bold"),
@@ -696,29 +468,18 @@ ggsave(file.path(catchment_map_dir, "Catchment_map_all_data_yr.png"), catchmap, 
 rm(Data_to_plot) ; rm(catchmap)
 
 
-#NZmap with structured data + unstructured data catchment map
-catchmap_new_legend <- catchmap + theme(legend.position = c(.25, .88),
-                                        legend.text=element_text(size = rel(1.2)))
-
-NZmap_catchmap <- ggarrange(nzmap_taranaki,
-                            catchmap_new_legend,
-                            widths = c(1,1))
-ggsave(file.path(catchment_map_dir, "NZmap_catchmap.png"), NZmap_catchmap, height = 12, width = 15)
-
-
-
 
 ############################################
 ############################################
 
 ##        1a        ##
 Data_to_plot <- VAST_input_data$`1a`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 # data_text <- data.frame(label="Random generation (n)",
@@ -729,7 +490,7 @@ catchmap1a <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +
@@ -753,12 +514,12 @@ rm(Data_to_plot)
 
 ##        1b        ##
 Data_to_plot <- VAST_input_data$`1b`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 catchmap1b <- ggplot(Data_to_plot) +
@@ -766,7 +527,7 @@ catchmap1b <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +
@@ -784,12 +545,12 @@ rm(Data_to_plot)
 
 ##        1c        ##
 Data_to_plot <- VAST_input_data$`1c`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 catchmap1c <- ggplot(Data_to_plot) +
@@ -797,7 +558,7 @@ catchmap1c <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +
@@ -815,12 +576,12 @@ rm(Data_to_plot)
 
 ##        1d        ##
 Data_to_plot <- VAST_input_data$`1d`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 catchmap1d <- ggplot(Data_to_plot) +
@@ -828,7 +589,7 @@ catchmap1d <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +
@@ -870,12 +631,12 @@ ggsave(file.path(catchment_map_dir, "Catchment_maps_scenario_1.png"), catchmaps_
 
 ##        2a        ##
 Data_to_plot <- VAST_input_data$`2a`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 # data_text <- data.frame(label="Random generation (n)",
@@ -886,7 +647,7 @@ catchmap2a <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +
@@ -910,12 +671,12 @@ rm(Data_to_plot)
 
 ##        2b        ##
 Data_to_plot <- VAST_input_data$`2b`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 catchmap2b <- ggplot(Data_to_plot) +
@@ -923,7 +684,7 @@ catchmap2b <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +
@@ -941,12 +702,12 @@ rm(Data_to_plot)
 
 ##        2c        ##
 Data_to_plot <- VAST_input_data$`2c`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 catchmap2c <- ggplot(Data_to_plot) +
@@ -954,7 +715,7 @@ catchmap2c <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +
@@ -972,12 +733,12 @@ rm(Data_to_plot)
 
 ##        2d        ##
 Data_to_plot <- VAST_input_data$`2d`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 catchmap2d <- ggplot(Data_to_plot) +
@@ -985,7 +746,7 @@ catchmap2d <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +
@@ -1028,12 +789,12 @@ ggsave(file.path(catchment_map_dir, "Catchment_maps_scenario_2.png"), catchmaps_
 
 ##        3a        ##
 Data_to_plot <- VAST_input_data$`3a`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 # data_text <- data.frame(label="Random generation (n)",
@@ -1044,7 +805,7 @@ catchmap3a <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +
@@ -1068,12 +829,12 @@ rm(Data_to_plot)
 
 ##        3b        ##
 Data_to_plot <- VAST_input_data$`3b`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 catchmap3b <- ggplot(Data_to_plot) +
@@ -1081,7 +842,7 @@ catchmap3b <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +
@@ -1099,12 +860,12 @@ rm(Data_to_plot)
 
 ##        3c        ##
 Data_to_plot <- VAST_input_data$`3c`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 catchmap3c <- ggplot(Data_to_plot) +
@@ -1112,7 +873,7 @@ catchmap3c <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +
@@ -1130,12 +891,12 @@ rm(Data_to_plot)
 
 ##        3d        ##
 Data_to_plot <- VAST_input_data$`3d`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 catchmap3d <- ggplot(Data_to_plot) +
@@ -1143,7 +904,7 @@ catchmap3d <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +
@@ -1183,12 +944,12 @@ ggsave(file.path(catchment_map_dir, "Catchment_maps_scenario_3.png"), catchmaps_
 
 ##        4a        ##
 Data_to_plot <- VAST_input_data$`4a`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 # data_text <- data.frame(label="Random generation (n)",
@@ -1199,7 +960,7 @@ catchmap4a <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +
@@ -1223,12 +984,12 @@ rm(Data_to_plot)
 
 ##        4b        ##
 Data_to_plot <- VAST_input_data$`4b`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 catchmap4b <- ggplot(Data_to_plot) +
@@ -1236,7 +997,7 @@ catchmap4b <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +
@@ -1254,12 +1015,12 @@ rm(Data_to_plot)
 
 ##        4c        ##
 Data_to_plot <- VAST_input_data$`4c`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 catchmap4c <- ggplot(Data_to_plot) +
@@ -1267,7 +1028,7 @@ catchmap4c <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +
@@ -1285,12 +1046,12 @@ rm(Data_to_plot)
 
 ##        4d        ##
 Data_to_plot <- VAST_input_data$`4d`$Data_Geostat
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Structured_EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Structured_NetTrap", 
-                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "Unstructured_PO",
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+                                          ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","Unstructured_PO","Structured_EF","Structured_NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("Pseudo-absence","PO","EF","NetTrap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 catchmap4d <- ggplot(Data_to_plot) +
@@ -1298,7 +1059,7 @@ catchmap4d <- ggplot(Data_to_plot) +
   geom_segment(data=l2, aes(x = Lon2,y = Lat2, xend = Lon, yend = Lat), col="gray") +
   geom_point(aes(x = Lon, y = Lat, col = Data_source), alpha = 0.8, size=3) +
   
-  xlab("Longitude") + ylab("Latitude") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
   #ggtitle("") +
   guides(color = guide_legend(title = "", override.aes = list(size=10))) + #increase size of point
   #scale_colour_manual(values = c("#008176","#0000a7", "#c1272d", "#eecc16")) +

@@ -39,7 +39,8 @@ network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
 network_to_join <- network %>% filter(parent_s!=0, FWENZ_isLake!=TRUE) #This takes out lakes
 
 #Observations
-NZFFD_raw <- read.csv(file.path(raw_data_dir, "nzffdms.csv")) # Downloaded from https://nzffdms.niwa.co.nz/search on 12/01/23
+#NZFFD_raw <- read.csv(file.path(raw_data_dir, "nzffdms_12_01_23.csv")) # Downloaded from https://nzffdms.niwa.co.nz/search on 12/01/23
+NZFFD_raw <- read.csv(file.path(raw_data_dir, "nzffdms_18_12_23.csv")) # Downloaded from https://nzffdms.niwa.co.nz/search on 18/12/23
 
 
 ###############
@@ -65,26 +66,30 @@ NZFFD <- NZFFD_raw %>%
          taxonName, taxonCommonName, taxonRemarks, totalCount, minLength, maxLength)
 
 
-#Ensure there is a year variable
+#Set year and month variable
 NZFFD$Year <- as.numeric(substr(NZFFD$eventDate, start = 1, stop = 4))
-NZFFD <- NZFFD %>% relocate(Year, .after = nzffdRecordNumber)
+NZFFD$Month <- as.numeric(substr(NZFFD$eventDate, start = 6, stop = 7))
+NZFFD$Day <- as.numeric(substr(NZFFD$eventDate, start = 9, stop = 10))
+
+NZFFD <- NZFFD %>% relocate(Year, Month, Day, .after = nzffdRecordNumber)
 NZFFD <- NZFFD[-(which(is.na(NZFFD$Year))),]
 
-#Investigating months vs years:
-#as.numeric(substr(NZFFD$eventDate, start = 6, stop = 7))
-#summary(as.numeric(substr(NZFFD$eventDate, start = 6, stop = 7)))
-# Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
-#   1.000   2.000   4.000   5.652   9.000  12.000    1030 
 
-# summary(as.numeric(substr(NZFFD$eventDate, start = 1, stop = 4)))
+#Investigating years vs months vs days:
+summary(NZFFD$Year)
+# Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+# 1901    1998    2007    2005    2017    2023
+summary(NZFFD$Month)
 # Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
-#    1901    1998    2007    2005    2015    2022      57 
-
-## There is more data for year than month, but month is still viable... need to look at final data set
+#   1.000   2.000   4.000   5.648   9.000  12.000     973 
+summary(NZFFD$Day)
+# Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+#    1.0    8.0   16.0   15.5   23.0   31.0    4566 
 
 
 #Rename recsegment variable
-NZFFD <- NZFFD %>% rename("nzsegment" = "recSegment")
+NZFFD <- NZFFD %>% 
+  dplyr::rename("nzsegment" = "recSegment")
 
 #Ensure the REC segments are correct
 NZFFD <- NZFFD[-(which(NZFFD$nzsegment <=9)),]   #removing records that never got assigned nzsegment numbers
@@ -146,12 +151,13 @@ table(NZFFD$FishMethod, useNA = "ifany")
 
 table(NZFFD$institution, useNA = "ifany")
 
-#Ran this to get a list of institutions to match up with groupings (and therefore creating "organisation table and groupings_v2.csv")
-write_csv(data.frame("Names"=names(table(NZFFD$institution, useNA = "ifany"))),
-          file = file.path(data_taranaki_dir, "NZFFD_institutions.csv"))
+# #Ran this if I need to get a list of institutions to match up with groupings (and therefore creating "organisation table and groupings_v2.csv")
+# write_csv(data.frame("Names"=names(table(NZFFD$institution, useNA = "ifany"))),
+#            file = file.path(raw_data_dir, "NZFFD_institutions.csv"))
 
 #Read organisation data with grouping information
-orgdat <- read.csv(file.path(raw_data_dir, "organisation table and groupings_v2.csv"))
+#I built v4 on 18/12/2023 with updated orgs (will need to do it again with new versions of the NZFFD)
+orgdat <- read.csv(file.path(raw_data_dir, "organisation table and groupings_v4.csv")) 
 
 #Join NZFFD data and organisation information
 NZFFD <- left_join(NZFFD, orgdat, by=c("institution"="name"))
@@ -163,10 +169,45 @@ NZFFD <- NZFFD %>%
   rename("org"=grouping) 
 
 
+
+##########################
+# Make new time variable #
+##########################
+
+## Season of observation
+NZFFD$Season <- ifelse(NZFFD$Month %in% c(12,1,2), "Summer",
+                       ifelse(NZFFD$Month %in% c(3,4,5), "Autumn",
+                              ifelse(NZFFD$Month %in% c(6,7,8), "Winter", 
+                                     ifelse(NZFFD$Month %in% c(9,10,11), "Spring", NA))))
+table(NZFFD$Season, useNA = "ifany")# 895 NA's
+
+## Year_Season variable
+#This ensures the summer 12th month is connected to the following year
+NZFFD$YearV2 <- ifelse(NZFFD$Month == 12, NZFFD$Year + 1, NZFFD$Year)
+
+NZFFD$Year_season <- paste0(NZFFD$YearV2, "_", NZFFD$Season)
+table(NZFFD$Year_season, useNA = "ifany") # 895 NA's
+
+# ## For implementation in VAST
+# NZFFD$Time <- NZFFD$YearV2 + ifelse(NZFFD$Month %in% c(12,1,2), 0,
+#                                     ifelse(NZFFD$Month %in% c(3,4,5), 0.25,
+#                                            ifelse(NZFFD$Month %in% c(6,7,8), 0.5, 
+#                                                   ifelse(NZFFD$Month %in% c(9,10,11), 0.75, NA))))
+# table(NZFFD$Time, useNA = "ifany") # 895 NA's
+
+## Hydrological year (June to May, i.e., "2020" is June 2020 to May 2021)
+NZFFD$Year_hydro <- ifelse(NZFFD$Month %in% c(1,2,3,4,5), NZFFD$Year - 1, 
+                           ifelse(NZFFD$Month %in% c(6,7,8,9,10,11,12), NZFFD$Year, NA))
+table(NZFFD$Year_hydro, useNA = "ifany") # 895 NA's
+
+## Remove variables not needed
+NZFFD$YearV2 <- NULL
+
+
+
 ################
 # Data to keep #
 ################
-
 
 #1. Subset by area and join REC (this automatically subsets to Taranaki region as network_to_join only 
 #   has Taranaki data and also excludes lakes).
@@ -177,7 +218,8 @@ NZFFD_REC_joined <- inner_join(NZFFD, network_to_join, by="nzsegment")
 NZFFD_REC_joined <- NZFFD_REC_joined %>% 
   select(nzffdRecordNumber, nzsegment, Lat, Lon, catchmentName, catchmentNumber, #Variables related to identifability and location
          child_s, parent_s, dist_s, #variables derived for stream network modelling
-         Year, org, institution, FishMethod, #variables specific to sampling (NOTE: institution kept as it is needed later)
+         Year, Year_hydro, Year_season, Season, Month, Day, #time variables
+         org, institution, FishMethod, #variables specific to sampling
          samplingPurpose,
          # EfmNumberOfPasses, EfmMinutes, EfmArea, NetsTrapsTotalNumber, #variables related to sampling effort
          # NetsTrapsBaited, NetsTrapsMeshSize, NetsTrapsDayNight,NetsTrapsAverageSetTime,
@@ -189,7 +231,8 @@ NZFFD_REC_joined <- NZFFD_REC_joined %>%
 NZFFD_REC_joined <- NZFFD_REC_joined %>%
   relocate(nzffdRecordNumber, nzsegment, Lat, Lon, catchmentName, catchmentNumber, #Variables related to identifability and location
            child_i, parent_i, dist_i, #variables derived for stream network modelling
-           Year, org, institution, FishMethod, #variables specific to sampling
+           Year, Year_hydro, Year_season, Season, Month, Day, #time variables
+           org, institution, FishMethod, #variables specific to sampling
            samplingPurpose,
            # EfmNumberOfPasses, EfmMinutes, EfmArea, NetsTrapsTotalNumber, #variables related to sampling effort
            # NetsTrapsBaited, NetsTrapsMeshSize, NetsTrapsDayNight,NetsTrapsAverageSetTime,
@@ -210,9 +253,7 @@ NZFFD_REC_joined <- NZFFD_REC_joined %>%
 NZFFD_abund <- NZFFD_REC_joined %>% 
   filter((!is.na(totalCount)))
 
-# Remove all fishing method except electric fishing
-# NZFFD_abund <- NZFFD_abund %>% filter(FishMethod != "Other")
-#NZFFD_abund <- NZFFD_abund %>% filter(FishMethod == "Electric fishing")
+# Remove all fishing method except electric fishing, net and trap
 NZFFD_abund <- NZFFD_abund %>% filter(FishMethod == "Electric fishing"| FishMethod == "Net" | FishMethod == "Trap")
 
 #Remove consultants, individuals, unknown, and NA
@@ -221,11 +262,14 @@ NZFFD_abund <- NZFFD_abund %>%
 
 #Examine the sampling purpose and remove if not appropriate
 table(NZFFD_abund$samplingPurpose, useNA = "ifany")
-##Remove "Abundance specific species" and "Presence or absence specific species" as these target species and
+##Remove sampling purposes that target species and
 ##therefore are more likely biased towards one species
 NZFFD_abund <- NZFFD_abund %>%
-  filter(!(samplingPurpose == "Abundance specific species" | samplingPurpose == "Presence or absence specific species")) #removes 95 samples
-
+  filter(!(samplingPurpose == "Abundance specific species" | 
+             samplingPurpose == "Fish salvage" | 
+             samplingPurpose == "Lengths and abundance specific species" |
+             samplingPurpose == "Other" |
+             samplingPurpose == "Presence or absence specific species")) #removes 156
 
 #check:
 table(NZFFD_abund$institution, is.na(NZFFD_abund$totalCount))
@@ -246,8 +290,7 @@ NZFFD_ene <- NZFFD_abund
 ## removing zeros as these will be manually generated
 NZFFD_ene <- NZFFD_ene %>% filter(totalCount > 0)
 
-
-NZFFD_ene <- NZFFD_ene[!duplicated(NZFFD_ene$nzffdRecordNumber),]
+DATA <- NZFFD_ene[!duplicated(NZFFD_ene[c("nzffdRecordNumber")]),]
 SPECIES<-unique(NZFFD_ene$taxonName)
 tmp<-split(NZFFD_ene$taxonName, NZFFD_ene$nzffdRecordNumber)
 
@@ -255,15 +298,20 @@ res <- lapply(tmp,function(x) match(SPECIES,x,nomatch=0)>0)
 res <- do.call("rbind",res)
 res <- data.frame(res)
 names(res) <- SPECIES
+res$nzffdRecordNumber <- as.numeric(rownames(res))
 
-NZFFD_ene <- NZFFD_ene[order(NZFFD_ene$nzffdRecordNumber),]
-NZFFD_ene<-cbind(NZFFD_ene,res)
+DATA <- DATA[order(DATA$nzffdRecordNumber),]
+#DATA<-cbind(DATA,res)
+DATA <- full_join(DATA, res, by="nzffdRecordNumber")
 
-nrow(NZFFD_ene)
-length(unique(NZFFD_ene$nzffdRecordNumber))
-## Both equal so ok
+nrow(DATA)
+length(unique(DATA$nzffdRecordNumber))
 
-rm(tmp,res)
+#Overwrite NZFFD_ene data
+NZFFD_ene <- DATA
+
+rm(tmp,res,DATA)
+
 
 #Select rows of interest
 colnames(NZFFD_ene)
@@ -271,11 +319,11 @@ colnames(NZFFD_ene)
 NZFFD_ene <- NZFFD_ene %>%
   select(nzffdRecordNumber, nzsegment, Lat, Lon, catchmentName, catchmentNumber, #Variables related to identifability and location
          child_i, parent_i, dist_i, #variables derived for stream network modelling
-         Year, org, institution, FishMethod, #variables specific to sampling
+         Year, Year_hydro, Year_season, Season, Month, Day, #time variables
+         org, institution, FishMethod, #variables specific to sampling
          #Put an effort variable here
          `Anguilla dieffenbachii`) #fish species encounter
 
-table(NZFFD_ene$Year, NZFFD_ene$`Anguilla dieffenbachii`)
 
 #Convert longfin eel FALSE/TRUE to 0/1
 NZFFD_ene$`Anguilla dieffenbachii` <- factor(NZFFD_ene$`Anguilla dieffenbachii`, levels = c("FALSE", "TRUE"))
@@ -284,6 +332,7 @@ NZFFD_ene$`Anguilla dieffenbachii` <- as.numeric(NZFFD_ene$`Anguilla dieffenbach
 #Add Data_source variable
 NZFFD_ene$Data_source <- ifelse(NZFFD_ene$FishMethod == "Electric fishing", "Structured_EF", 
                         ifelse(NZFFD_ene$FishMethod %in% c("Net", "Trap"), "Structured_NetTrap", NA))
+
 
 
 ###################################################
@@ -299,31 +348,70 @@ NZFFD_eo <- NZFFD_REC_joined %>%  #filter out abundance sampling using nzffdReco
 
 NZFFD_eo <- NZFFD_eo %>% filter(taxonName == "Anguilla dieffenbachii")
 
-#check
-table(NZFFD_eo$Year)
+## removing zeros
+NZFFD_eo <- NZFFD_eo %>% filter(totalCount > 0 | is.na(totalCount)) #none removed
+
+#Remove duplicate presence-only data 
+#only real impact on final data is removing 3 obs from 2020 (year_hydro), 1 obs removed from 1921 (doesn't impact final data)
+NZFFD_eo <- NZFFD_eo[!duplicated(NZFFD_eo[c("nzffdRecordNumber")]),]
 
 ## Format data equivalently to NZFFD data
 NZFFD_eo <- NZFFD_eo %>%
   select(nzffdRecordNumber, nzsegment, Lat, Lon, catchmentName, catchmentNumber, #Variables related to identifability and location
          child_i, parent_i, dist_i, #variables derived for stream network modelling
-         Year, org, institution, FishMethod) %>% #variables specific to sampling
+         Year, Year_hydro, Year_season, Season, Month, Day, #time variables
+         org, institution, FishMethod) %>% #variables specific to sampling
   mutate("Anguilla dieffenbachii"=1, "Data_source" = "Unstructured")
 
+
+
+##############################
+# Select final time variable #
+#############################
+
+
+#presence/absence data
+table(NZFFD_ene$Year_hydro, useNA = "ifany")
+# 1965 1978 1979 1980 1981 1982 1983 1984 1985 1986 1987 1988 1990 1991 1992 1993 1994 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 
+# 1   35   26   15   41    5    5   27   14   19    6    5   50   39    6    9   27   13   22   48    8   40   38   17   16   11    2 
+# 2005 2006 2007 2008 2009 2010 2011 2012 2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 <NA> 
+#   5   27   32   30  118    2   64    2   15    2    7   61   20   13   19    6   15    3    5
+
+#Remove all but Year_hyrdo and rename Year_hydro to Year
+NZFFD_ene <- NZFFD_ene %>%
+  select(-c("Year", "Year_season", "Season", "Month", "Day")) %>%
+  rename("Year" = "Year_hydro")
+
+#remove missing year data
+NZFFD_ene <- NZFFD_ene %>% 
+  filter(!is.na(Year)) # 5 removed
+
+table(NZFFD_ene$Year, useNA = "ifany") 
+
+
+#presence-only data
+table(NZFFD_eo$Year_hydro, useNA = "ifany")
+
+#Remove all but Year_hyrdo
+NZFFD_eo <- NZFFD_eo %>%
+  select(-c("Year", "Year_season", "Season", "Month", "Day")) %>%
+  rename("Year" = "Year_hydro")
+
+table(NZFFD_eo$Year, useNA = "ifany") #No data to remove
+# 1921 1960 1978 1979 1980 1981 1984 1986 1990 1991 1992 1993 1994 1995 1996 1997 1998 1999 2000 2001 2002 2003 2004 2005 2007 2008 2010 
+# 2    1    3   26   16    1    2    2   13   37   20   11   15    9   19   40   18   20    7   46   11    2   16    2   14   15   28 
+# 2011 2012 2013 2014 2015 2016 2017 2018 2019 2020 2021 2022 
+# 24    5    7    6   13   24   20    6   28   17   33   10
+  
 
 
 ################################
 # Examine the data across time #
 ################################
 
-#presence/absence data
-addmargins(table(NZFFD_ene$Year))
-
-#presence-only data
-addmargins(table(NZFFD_eo$Year))
-
-#Very few observations prior to 1978 for both data sets so remove
-NZFFD_ene <- NZFFD_ene %>% filter(Year >= 1978)
-NZFFD_eo <- NZFFD_eo %>% filter(Year >= 1978)
+#Very few observations prior to 1978 for both data sets so remove, remove 2023 as incomplete
+NZFFD_ene <- NZFFD_ene %>% filter(Year >= 1978 & Year <= 2022)
+NZFFD_eo <- NZFFD_eo %>% filter(Year >= 1978 & Year <= 2022)
 
 
 #encounter/non-encounter data

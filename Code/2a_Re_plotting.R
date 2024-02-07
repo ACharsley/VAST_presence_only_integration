@@ -1,9 +1,4 @@
 ###################################################
-##        Taranaki Presence/absence model        ##
-##                                               ##
-##               Anthony Charsley                ##
-##                    May 2023                   ##
-###################################################
 
 
 rm(list=ls())
@@ -14,7 +9,6 @@ rm(list=ls())
 #  Packages  #
 ##############
 
-library(plyr)
 library(tidyverse)
 library(VAST)
 library(splines)  # Used to include basis-splines
@@ -43,7 +37,7 @@ source(paste0(getwd(), "/Code/funcs.R"))
 #  Modelling scenario  #
 ########################
 
-inputArgs <- commandArgs(trailingOnly=TRUE) #inputArgs <- c("HPC", "NA", "SE_off") #inputArgs <- c(NA, "NA", "SE_off")
+inputArgs <- commandArgs(trailingOnly=TRUE) #inputArgs <- c("HPC", "NA", "SE_off")
 run_command <- inputArgs[1] ; print(run_command)
 rerun <- inputArgs[2] ; print(rerun)
 SE_switch <- inputArgs[3] ; print(SE_switch) #SE_off, SE_on
@@ -52,7 +46,7 @@ SE_switch <- inputArgs[3] ; print(SE_switch) #SE_off, SE_on
 if(!is.na(run_command)){
   
   if(run_command == "HPC"){
-    task_id = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID")) #task_id = 10
+    task_id = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID")) #task_id = 1
     
     if(task_id==1){scenario <- "Taranaki data"}
     if(task_id==2){scenario <- "1a"}
@@ -96,7 +90,7 @@ if(!is.na(run_command)){
   # "OM_2a", "OM_2b"
   # "OM_3a", "OM_3b"
   # "OM_4a", "OM_4b"
-  scenario <-   "3a"
+  scenario <-   "1a"
   network_type <- "downstream"
 }
 
@@ -110,7 +104,6 @@ print(scenario) ; print(network_type)
 
 #Set model path
 model_path <- paste0(getwd(), "/Models")
-dir.create(model_path, showWarnings=F)
 
 #Set path
 if(scenario == "Taranaki data"){
@@ -134,11 +127,8 @@ if(SE_switch == "SE_on"){
   path <- paste0(path, "_SE")
 }
 
-#Create model sub-path
-dir.create(path, showWarnings = FALSE)
-
+#Figures path
 path_figs <- file.path(path, "Figures")
-dir.create(path_figs, showWarnings=FALSE)
 
 
 
@@ -208,7 +198,7 @@ if(scenario == "Taranaki data"){
   catchability_data <- Data_inp[,c("Lat", "Lon", "Data_source_inp")]
 }else{
   Data_inp$Data_source_inp <- as.factor(ifelse(Data_inp$Data_source == "Structured_EF", 0, 
-                                   ifelse(Data_inp$Data_source == "Structured_NetTrap", 1, 2)) )
+                                               ifelse(Data_inp$Data_source == "Structured_NetTrap", 1, 2)) )
   #Structured_EF = 0, Structured_NetTrap = 1, Unstructured = 2
   
   Q1_formula <- ~ Data_source_inp
@@ -229,7 +219,7 @@ if(!is.na(rerun)){
   if(rerun == "rerun"){ #Remove spatio-temporal variation
     RhoConfig <- c("Beta1" = 2, "Beta2" = 3, "Epsilon1" = 0, "Epsilon2" = 0) 
   }
-  }
+}
 
 
 ObsModel <- c(2,0)
@@ -243,7 +233,7 @@ if(SE_switch == "SE_off"){
   }else{
     stop("SE_switch needs to be specified")
   }
-  }
+}
 
 
 if(network_type == "downstream"){
@@ -308,40 +298,18 @@ Spatial_List = make_spatial_info(n_x = nrow(Network_sz),
 #           PlotDir = paste0(path_figs, "/")) 
 
 
+###################
+# Load model save #
+###################
 
-########################
-# Build the TMB object #
-########################
-TmbData = make_data(b_i = as_units(Data_inp$Catch_KG, unitless), 
-                    a_i = as_units(rep(1, nrow(Data_inp)), unitless), 
-                    t_i = Data_inp$Year,
-                    
-                    Version = Version,
-                    FieldConfig = FieldConfig, 
-                    OverdispersionConfig = OverdispersionConfig,
-                    RhoConfig = RhoConfig, 
-                    ObsModel_ez = ObsModel, 
-                    Options = Options, 
-                    
-                    covariate_data = covariate_df,
-                    #X_gctp = X_gctp,
-                    #X_itp = X_itp,
-                    X1_formula = X1_formula_inp,
-                    #X1config_cp = X1config_inp,
-                    X2_formula = X2_formula_inp,
-                    #X2config_cp = X2config_inp,
-                    
-                    catchability_data = catchability_data,
-                    Q1_formula = Q1_formula,
-                    Q2_formula = Q2_formula,
-                    Q1config_k = Q1config_k,
-                    Q2config_k = Q2config_k,
-                    
-                    spatial_list = Spatial_List,
-                    Network_sz = Network_sz,
-                    CheckForErrors = TRUE)
+load(file.path(path, "Save.RData"))
+## Here's where code gets to on 2_Models.R
 
-
+#Set important stuff
+Report <- Save$Report
+Opt <- Save$Opt
+TmbData <- Save$TmbData
+ParHat <- Save$ParHat
 
 ####################
 # Build VAST model #
@@ -380,37 +348,14 @@ Obj = TmbList[["Obj"]]
 Obj$fn( Obj$par )
 Obj$gr( Obj$par )
 
-
-
-#####################################################
-# Estimate fixed effects and predict random effects #
-#####################################################
-start_time <- Sys.time()
-Opt = TMBhelper::fit_tmb(obj = Obj,
-                         lower = TmbList[["Lower"]],
-                         upper = TmbList[["Upper"]],
-                         getsd = TRUE, 
-                         savedir = path, 
-                         bias.correct = bias_correct, 
-                         newtonsteps = 3, 
-                         bias.correct.control = bias_correct_control, 
-                         getJointPrecision = TRUE) 
-Report = Obj$report()
-time = Sys.time() - start_time ; print(paste0("Model run time: ", time))
-
-
-
-####################################
-# Save important model information #
-####################################
-
-Save = list( "Opt" = Opt, "Report" = Report, "ParHat" = Obj$env$parList( Opt$par ), "TmbData" = TmbData )
-save(Save, file = file.path(path, "Save.RData"))
+####################
+# Save other stuff #
+####################
 
 model_data <- Data_inp %>%
   select(Lat, Lon, Catch_KG, Year) %>%
   dplyr::rename("Lat_i" = "Lat", "Lon_i" = "Lon", "b_i" = "Catch_KG", "t_i" = "Year") %>%
-  dplyr::mutate("a_i" = rep(1,nrow(Data_inp)), "v_i" = rep(0,nrow(Data_inp)),
+  mutate("a_i" = rep(1,nrow(Data_inp)), "v_i" = rep(0,nrow(Data_inp)),
          "c_iz" = rep(0,nrow(Data_inp))) %>%
   relocate("Lat_i", "Lon_i", "a_i", "v_i", "b_i", "t_i", "c_iz")
 
@@ -419,11 +364,11 @@ model_data <- Data_inp %>%
 Fit <- list( "data_frame" = model_data,
              "extrapolation_list" = Extrapolation_List,
              "spatial_list" = Spatial_List,
-             "data_list" = TmbData,
+             "data_list" = Save$TmbData,
              "tmb_list" = TmbList,
-             "parameter_estimates" = Opt,
-             "Report" = Report,
-             "ParHat" = Obj$env$parList( Opt$par ),
+             "parameter_estimates" = Save$Opt,
+             "Report" = Save$Report,
+             "ParHat" = Save$ParHat,
              "year_labels" = c(min(model_data$t_i):max(model_data$t_i)),
              "years_to_plot" = which(c(min(model_data$t_i):max(model_data$t_i)) %in% unique(model_data$t_i)),
              "category_names" = NA,
@@ -434,7 +379,7 @@ Fit <- list( "data_frame" = model_data,
              #"X_gctp" = X_gctp,
              #"X_itp" = X_itp,
              "covariate_data" = covariate_df,
-             "X1_gctp" = TmbData$X1_gctp,
+             "X1_gctp" = Save$TmbData$X1_gctp,
              #"X2_gctp" = TmbData$X2_gctp, #No affect on 2nd linear predictor
              #"X1_formula" = X1_formula_inp,
              #"X2_formula" = X2_formula_inp,
@@ -442,8 +387,7 @@ Fit <- list( "data_frame" = model_data,
              "Q2config_k" = Q2config_k,
              "catchability_data" = catchability_data,
              "Q1_formula" = Q1_formula,
-             "Q2_formula" = Q2_formula,
-             "total_time" = time)
+             "Q2_formula" = Q2_formula )#, "total_time" = time)
 
 save(Fit, file = file.path(path, "Fit.RData"))
 #load(file.path(path, "Fit.RData"))
@@ -458,6 +402,9 @@ save(Probability_of_encounter, file = file.path(path, "Probability_of_encounter.
 
 
 ###############
+
+
+###############
 # Check model #
 ###############
 
@@ -467,6 +414,14 @@ save(Probability_of_encounter, file = file.path(path, "Probability_of_encounter.
 pander::pandoc.table( Opt$diagnostics[,c( 'Param', 'Lower', 'MLE', 'Upper', 'final_gradient' )] ) 
 all( abs( Opt$diagnostics[,'final_gradient'] ) <1e-4 ) #### TRUE
 all( eigen( Opt$SD$cov.fixed )$values >0 ) #### TRUE
+
+
+
+
+
+
+
+
 
 
 
@@ -575,7 +530,7 @@ plot_maps_network(plot_set = c(1),
 # Without titles and with zlimit changed
 print(summary(Fit$Report$R1_gct))
 
-zlim_inp <- c(0, plyr::round_any(max(Fit$Report$R1_gct), 0.1, f=ceiling))
+zlim_inp <- c(0, round_any(max(Fit$Report$R1_gct), 0.1, f=ceiling))
 
 ## Yearly
 plot_maps_network(plot_set = c(1), 
@@ -618,8 +573,7 @@ if(SE_switch == "SE_on"){
   Network_sz_EN <- data.frame('parent_s'=Fit$data_list$parent_s, 'child_s'=Fit$data_list$child_s, Fit$spatial_list$latlon_g)
   l2 <- lapply(1:nrow(Network_sz_EN), function(x){
     parent <- Network_sz_EN$parent_s[x]
-    find <- Network_sz_EN %>% 
-      dplyr::filter(child_s == parent)
+    find <- Network_sz_EN %>% filter(child_s == parent)
     if(nrow(find)>0) out <- cbind.data.frame(Network_sz_EN[x,], 'long2'=find$Lon, 'lat2'=find$Lat)
     if(nrow(find)==0) out <- cbind.data.frame(Network_sz_EN[x,], 'long2'=NA, 'lat2'=NA)
     return(out)
