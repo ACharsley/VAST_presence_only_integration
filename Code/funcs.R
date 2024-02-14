@@ -367,13 +367,13 @@ plot_maps_network <-
     }
     
     
-    #Statements to detect errors
-    if( Nyears != length(year_labels) ){
-      stop("Problem with `year_labels`")
-    }
-    if( Ncategories != length(category_names) ){
-      stop("Problem with `category_names`")
-    }
+    # #Statements to detect errors
+    # if( Nyears != length(year_labels) ){
+    #   stop("Problem with `year_labels`")
+    # }
+    # if( Ncategories != length(category_names) ){
+    #   stop("Problem with `category_names`")
+    # }
     
     
     
