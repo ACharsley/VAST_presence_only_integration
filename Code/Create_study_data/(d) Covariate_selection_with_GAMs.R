@@ -86,6 +86,7 @@ cor(data_full[,covariate_names])
 data_full$Barrier_present <- factor(data_full$Barrier_present)
 
 
+
 #######################
 # Combine Fish Method #
 #######################
@@ -98,11 +99,17 @@ data_full$FishMethod <- ifelse(data_full$FishMethod == "Electric fishing", "Elec
 
 
 
-#############################
-# Fit GAM with spatial term #
-#############################
+########################################################################
+# Fit GAM with temporal smoother, and spatial and spatio-temporal term #
+########################################################################
+## Note temporal term set with default settings but not necessarily the same as VAST temporal term. Need to investigate further.
 
-bingam1a = gam( Encounter ~ Year + FishMethod + te(Lat,Lon) +
+bingam1a = gam( Encounter ~ 
+                  s(Year) + #temporal term
+                  te(Lat,Lon) + #spatial term
+                  te(Lat,Lon, by = Year) + #spatio-temporal term
+                  FishMethod +
+                  
                   s(std_Dist2Coast, k=3, bs="ts") +
                   s(std_log_loc_elev, k=3, bs="ts") +
                   s(std_log_seg_ro_mm, k=3, bs="ts") +
@@ -115,7 +122,12 @@ bingam1a = gam( Encounter ~ Year + FishMethod + te(Lat,Lon) +
 summary(bingam1a)
 
 #Remove std_log_MeanFlowCumecs
-bingam2a = gam( Encounter ~ Year + FishMethod +  te(Lat,Lon) +
+bingam2a = gam( Encounter ~ 
+                  s(Year) + #temporal term
+                  te(Lat,Lon) + #spatial term
+                  te(Lat,Lon, by = Year) + #spatio-temporal term
+                  FishMethod +
+                  
                   s(std_Dist2Coast, k=3, bs="ts") +
                   s(std_log_loc_elev, k=3, bs="ts") +
                   s(std_log_seg_ro_mm, k=3, bs="ts") +
@@ -126,29 +138,45 @@ bingam2a = gam( Encounter ~ Year + FishMethod +  te(Lat,Lon) +
 
 summary(bingam2a)
 
+
+#Remove std_Dist2Coast
+bingam3a = gam( Encounter ~ 
+                  s(Year) + #temporal term
+                  te(Lat,Lon) + #spatial term
+                  te(Lat,Lon, by = Year) + #spatio-temporal term
+                  FishMethod +
+                  
+                  s(std_log_loc_elev, k=3, bs="ts") +
+                  s(std_log_seg_ro_mm, k=3, bs="ts") +
+                  s(std_FWENZ_SegRipShade, k=3, bs="ts") +
+                  s(std_FWENZ_segSubstrate, k=3, bs="ts") +
+                  Barrier_present,
+                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
+
+summary(bingam3a)
+
 #Remove Barrier_present
-bingam3a = gam( Encounter ~ Year + FishMethod +  te(Lat,Lon) +
-                  s(std_Dist2Coast, k=3, bs="ts") +
+bingam4a = gam( Encounter ~ 
+                  s(Year) + #temporal term
+                  te(Lat,Lon) + #spatial term
+                  te(Lat,Lon, by = Year) + #spatio-temporal term
+                  FishMethod +
+                  
                   s(std_log_loc_elev, k=3, bs="ts") +
                   s(std_log_seg_ro_mm, k=3, bs="ts") +
                   s(std_FWENZ_SegRipShade, k=3, bs="ts") +
                   s(std_FWENZ_segSubstrate, k=3, bs="ts"),
                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
 
-summary(bingam3a)
-
-#Remove std_log_seg_ro_mm
-bingam4a = gam( Encounter ~ Year + FishMethod + te(Lat,Lon) +
-                  s(std_Dist2Coast, k=3, bs="ts") +
-                  s(std_log_loc_elev, k=3, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=3, bs="ts") +
-                  s(std_FWENZ_segSubstrate, k=3, bs="ts"),
-                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-
 summary(bingam4a)
 
-#Remove std_Dist2Coast
-bingam5a = gam( Encounter ~ Year + FishMethod + te(Lat,Lon) +
+#Remove std_log_seg_ro_mm
+bingam5a = gam( Encounter ~ 
+                  s(Year) + #temporal term
+                  te(Lat,Lon) + #spatial term
+                  te(Lat,Lon, by = Year) + #spatio-temporal term
+                  FishMethod +
+                  
                   s(std_log_loc_elev, k=3, bs="ts") +
                   s(std_FWENZ_SegRipShade, k=3, bs="ts") +
                   s(std_FWENZ_segSubstrate, k=3, bs="ts"),
@@ -158,176 +186,83 @@ summary(bingam5a) ## small p-value and EDF greater than 0.9
 
 
 
+################################################################################################
+# Fit GAM with temporal smoother, spatial and spatio-temporal term and B-splines on covariates #
+################################################################################################
+## Note temporal term set with default settings but not necessarily the same as VAST temporal term. Need to investigate further.
 
-#################################################
-# Fit GAM with spatial and spatio-temporal term #
-#################################################
-
-bingam1b = gam( Encounter ~ 
-                  Year + #temporal term
-                  te(Lat,Lon) + #spatial term
-                  te(Lat,Lon, by = Year) + #spatio-temporal term
-                  FishMethod +
-                  
-                  s(std_Dist2Coast, k=3, bs="ts") +
-                  s(std_log_loc_elev, k=3, bs="ts") +
-                  s(std_log_seg_ro_mm, k=3, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=3, bs="ts") +
-                  s(std_log_MeanFlowCumecs, k=3, bs="ts") +
-                  s(std_FWENZ_segSubstrate, k=3, bs="ts") +
-                  Barrier_present,
-                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-
-summary(bingam1b)
-
-#Remove std_log_MeanFlowCumecs
-bingam2b = gam( Encounter ~ 
-                  Year + #temporal term
-                  te(Lat,Lon) + #spatial term
-                  te(Lat,Lon, by = Year) + #spatio-temporal term
-                  FishMethod +
-                  
-                  s(std_Dist2Coast, k=3, bs="ts") +
-                  s(std_log_loc_elev, k=3, bs="ts") +
-                  s(std_log_seg_ro_mm, k=3, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=3, bs="ts") +
-                  s(std_FWENZ_segSubstrate, k=3, bs="ts") +
-                  Barrier_present,
-                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-
-summary(bingam2b)
-
-#Remove Barrier_present
-bingam3b = gam( Encounter ~ 
-                  Year + #temporal term
-                  te(Lat,Lon) + #spatial term
-                  te(Lat,Lon, by = Year) + #spatio-temporal term
-                  FishMethod +
-                  
-                  s(std_Dist2Coast, k=3, bs="ts") +
-                  s(std_log_loc_elev, k=3, bs="ts") +
-                  s(std_log_seg_ro_mm, k=3, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=3, bs="ts") +
-                  s(std_FWENZ_segSubstrate, k=3, bs="ts"),
-                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-
-summary(bingam3b)
-
-#Remove std_log_seg_ro_mm
-bingam4b = gam( Encounter ~ 
-                  Year + #temporal term
-                  te(Lat,Lon) + #spatial term
-                  te(Lat,Lon, by = Year) + #spatio-temporal term
-                  FishMethod +
-                  
-                  s(std_Dist2Coast, k=3, bs="ts") +
-                  s(std_log_loc_elev, k=3, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=3, bs="ts") +
-                  s(std_FWENZ_segSubstrate, k=3, bs="ts"),
-                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-
-summary(bingam4b)
-
-#Remove std_Dist2Coast
-bingam5b = gam( Encounter ~ 
-                  Year + #temporal term
-                  te(Lat,Lon) + #spatial term
-                  te(Lat,Lon, by = Year) + #spatio-temporal term
-                  FishMethod +
-                  
-                  s(std_log_loc_elev, k=3, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=3, bs="ts") +
-                  s(std_FWENZ_segSubstrate, k=3, bs="ts"),
-                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-
-summary(bingam5b) ## small p-value and EDF greater than 0.9
-
-
-
-########################################################################
-# Fit GAM with temporal smoother, and spatial and spatio-temporal term #
-########################################################################
-
-## Gives the same result but covariates removed in different order.
-## Note temporal term set with default settings but not necessarily correct
-
-
-bingam1c = gam( Encounter ~ 
-                  s(Year) + #temporal term
-                  te(Lat,Lon) + #spatial term
-                  te(Lat,Lon, by = Year) + #spatio-temporal term
-                  FishMethod +
-                  
-                  s(std_Dist2Coast, k=3, bs="ts") +
-                  s(std_log_loc_elev, k=3, bs="ts") +
-                  s(std_log_seg_ro_mm, k=3, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=3, bs="ts") +
-                  s(std_log_MeanFlowCumecs, k=3, bs="ts") +
-                  s(std_FWENZ_segSubstrate, k=3, bs="ts") +
-                  Barrier_present,
-                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-
-summary(bingam1c)
-
-#Remove std_log_MeanFlowCumecs
-bingam2c = gam( Encounter ~ 
-                  s(Year) + #temporal term
-                  te(Lat,Lon) + #spatial term
-                  te(Lat,Lon, by = Year) + #spatio-temporal term
-                  FishMethod +
-                  
-                  s(std_Dist2Coast, k=3, bs="ts") +
-                  s(std_log_loc_elev, k=3, bs="ts") +
-                  s(std_log_seg_ro_mm, k=3, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=3, bs="ts") +
-                  s(std_FWENZ_segSubstrate, k=3, bs="ts") +
-                  Barrier_present,
-                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-
-summary(bingam2c)
-
-
-#Remove std_Dist2Coast
-bingam3c = gam( Encounter ~ 
-                  s(Year) + #temporal term
-                  te(Lat,Lon) + #spatial term
-                  te(Lat,Lon, by = Year) + #spatio-temporal term
-                  FishMethod +
-                  
-                  s(std_log_loc_elev, k=3, bs="ts") +
-                  s(std_log_seg_ro_mm, k=3, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=3, bs="ts") +
-                  s(std_FWENZ_segSubstrate, k=3, bs="ts") +
-                  Barrier_present,
-                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-
-summary(bingam3c)
-
-#Remove Barrier_present
-bingam4c = gam( Encounter ~ 
-                  s(Year) + #temporal term
-                  te(Lat,Lon) + #spatial term
-                  te(Lat,Lon, by = Year) + #spatio-temporal term
-                  FishMethod +
-                  
-                  s(std_log_loc_elev, k=3, bs="ts") +
-                  s(std_log_seg_ro_mm, k=3, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=3, bs="ts") +
-                  s(std_FWENZ_segSubstrate, k=3, bs="ts"),
-                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-
-summary(bingam4c)
-
-#Remove std_log_seg_ro_mm
-bingam5c = gam( Encounter ~ 
-                  s(Year) + #temporal term
-                  te(Lat,Lon) + #spatial term
-                  te(Lat,Lon, by = Year) + #spatio-temporal term
-                  FishMethod +
-                  
-                  s(std_log_loc_elev, k=3, bs="ts") +
-                  s(std_FWENZ_SegRipShade, k=3, bs="ts") +
-                  s(std_FWENZ_segSubstrate, k=3, bs="ts"),
-                family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
-
-summary(bingam5c) ## small p-value and EDF greater than 0.9
+# bingam1b = gam( Encounter ~ 
+#                   s(Year) + #temporal term
+#                   te(Lat,Lon) + #spatial term
+#                   te(Lat,Lon, by = Year) + #spatio-temporal term
+#                   FishMethod +
+#                   
+#                   s(std_Dist2Coast, m=c(3,2), bs="bs") +
+#                   s(std_log_loc_elev, m=c(3,2), bs="bs") +
+#                   s(std_log_seg_ro_mm, m=c(3,2), bs="bs") +
+#                   s(std_FWENZ_SegRipShade, m=c(3,2), bs="bs") +
+#                   s(std_log_MeanFlowCumecs, m=c(3,2), bs="bs") +
+#                   s(std_FWENZ_segSubstrate, m=c(3,2), bs="bs") +
+#                   Barrier_present,
+#                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
+# summary(bingam1b)
+# 
+# #Remove Barrier_present
+# bingam2b = gam( Encounter ~ 
+#                   s(Year) + #temporal term
+#                   te(Lat,Lon) + #spatial term
+#                   te(Lat,Lon, by = Year) + #spatio-temporal term
+#                   FishMethod +
+#                   
+#                   s(std_Dist2Coast, m=c(3,2), bs="bs") +
+#                   s(std_log_loc_elev, m=c(3,2), bs="bs") +
+#                   s(std_log_seg_ro_mm, m=c(3,2), bs="bs") +
+#                   s(std_FWENZ_SegRipShade, m=c(3,2), bs="bs") +
+#                   s(std_log_MeanFlowCumecs, m=c(3,2), bs="bs") +
+#                   s(std_FWENZ_segSubstrate, m=c(3,2), bs="bs"),
+#                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
+# summary(bingam2b)
+# 
+# #Remove std_log_MeanFlowCumecs
+# bingam3b = gam( Encounter ~ 
+#                   s(Year) + #temporal term
+#                   te(Lat,Lon) + #spatial term
+#                   te(Lat,Lon, by = Year) + #spatio-temporal term
+#                   FishMethod +
+#                   
+#                   s(std_Dist2Coast, m=c(3,2), bs="bs") +
+#                   s(std_log_loc_elev, m=c(3,2), bs="bs") +
+#                   s(std_log_seg_ro_mm, m=c(3,2), bs="bs") +
+#                   s(std_FWENZ_SegRipShade, m=c(3,2), bs="bs") +
+#                   s(std_FWENZ_segSubstrate, m=c(3,2), bs="bs"),
+#                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
+# summary(bingam3b)
+# 
+# #Remove std_log_seg_ro_mm
+# bingam4b = gam( Encounter ~ 
+#                   s(Year) + #temporal term
+#                   te(Lat,Lon) + #spatial term
+#                   te(Lat,Lon, by = Year) + #spatio-temporal term
+#                   FishMethod +
+#                   
+#                   s(std_Dist2Coast, m=c(3,2), bs="bs") +
+#                   s(std_log_loc_elev, m=c(3,2), bs="bs") +
+#                   s(std_FWENZ_SegRipShade, m=c(3,2), bs="bs") +
+#                   s(std_FWENZ_segSubstrate, m=c(3,2), bs="bs"),
+#                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
+# summary(bingam4b)
+# 
+# #Remove std_log_loc_elev
+# bingam5b = gam( Encounter ~ 
+#                   s(Year) + #temporal term
+#                   te(Lat,Lon) + #spatial term
+#                   te(Lat,Lon, by = Year) + #spatio-temporal term
+#                   FishMethod +
+#                   
+#                   s(std_Dist2Coast, m=c(3,2), bs="bs") +
+#                   s(std_FWENZ_SegRipShade, m=c(3,2), bs="bs") +
+#                   s(std_FWENZ_segSubstrate, m=c(3,2), bs="bs"),
+#                 family=binomial(link="logit"), select=TRUE, method='REML', data=data_full)
+# summary(bingam5b) ## small p-value and EDF greater than 0.9
+# 
+# ## Here, distance to coast is selected instead of elevation. Along with shade and substrate, as before.
