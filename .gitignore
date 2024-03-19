@@ -40,6 +40,7 @@ vignettes/*.pdf
 
 
 #My folders to ignore
+Code_backup/
 Dam_Analysis/
 Data_processed/
 Data_raw/
@@ -53,5 +54,6 @@ Send to Shan/
 
 Code/Example code
 Code/Old code
+
 
 
