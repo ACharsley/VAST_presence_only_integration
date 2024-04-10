@@ -375,14 +375,21 @@ rm(Data_to_plot) ; rm(catchmap)
 
 ## structured data + unstructured data
 Data_to_plot <- VAST_input_data$`1a`$Data_Geostat #can use any scenario to demonstrate, just need to remove pseudo-absence data
-Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
-                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+# Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "EF",
+#                                    ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "NetTrap", 
+#                                           ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
+#                                                   "Pseudo-absence")))
+
+Data_to_plot$Data_source <- ifelse(Data_to_plot$Data_source == "Structured_EF", "Electric Fishing",
+                                   ifelse(Data_to_plot$Data_source == "Structured_NetTrap", "Net and Trap", 
                                           ifelse( c(Data_to_plot$Data_source == "Unstructured" & Data_to_plot$Catch_KG > 0), "PO",
                                                   "Pseudo-absence")))
+
 Data_to_plot <- Data_to_plot %>% filter(!(Data_source == "Pseudo-absence"))
 
 #Arrange data for plotting
-Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("PO","EF","NetTrap"))
+#Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("PO","EF","NetTrap"))
+Data_to_plot$Data_source <- factor(Data_to_plot$Data_source, levels = c("PO","Electric Fishing","Net and Trap"))
 Data_to_plot <- Data_to_plot %>% arrange(Data_source)
 
 

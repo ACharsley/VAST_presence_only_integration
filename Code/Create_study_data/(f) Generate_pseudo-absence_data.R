@@ -73,7 +73,9 @@ NZ_roads_data <- read_sf(dsn = raw_data_dir, layer = "nz-primary-road-parcels") 
 
 #Extract coordinates
 NZ_roads_coords <- as.data.frame(sf::st_coordinates(NZ_roads_data)) %>% select(X,Y) %>% rename("Lat"=Y, "Lon"=X)
-NZ_roads_coords <- st_as_sf(NZ_roads_coords, coords = c("Lon","Lat"), crs = 4326, agr = "constant") #Save as sf object
+#NZ_roads_coords <- st_as_sf(NZ_roads_coords, coords = c("Lon","Lat"), crs = 4326, agr = "constant") #old code but results in same coordinate projections
+NZ_roads_coords <- st_as_sf(NZ_roads_coords, coords = c("Lon","Lat"), crs = 4167) # the crs recorded at: https://data.linz.govt.nz/layer/50796-nz-primary-road-parcels/#:~:text=polygon%20layer%20%20Multipolygon-,CRS%20as%20stored,-NZGD2000EPSG%3A4167
+
 NZ_roads_coords <- st_transform(NZ_roads_coords, 3857) #Ensure I'm using the correct projection for distance calcs
 
 
