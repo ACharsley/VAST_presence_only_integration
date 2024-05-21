@@ -1,5 +1,5 @@
 ###################################################
-#                Trend annomaly                   #
+#                Trend anomaly                    #
 #                                                 #
 #               Anthony Charsley                  #
 #               19th March 2024                   #
