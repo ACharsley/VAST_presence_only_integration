@@ -66,6 +66,8 @@ network = VAST_input_data[["Taranaki data"]]$network
 # Processed covariate data
 for(cov in covars_all){# cov = "Barrier_present"
   
+  print(cov)
+  
   data_to_plot <- covariate_df %>%
     mutate("Covariate" = covariate_df[,cov])
   
@@ -74,7 +76,7 @@ for(cov in covars_all){# cov = "Barrier_present"
     catchmap4 <- ggplot(data_to_plot) +
       geom_point(aes(x = Lon, y = Lat, col=Covariate), alpha=0.6) +
       facet_wrap(~Year) +
-      scale_colour_distiller(palette = "RdYlGn", direction = 1) +
+      scale_colour_distiller(palette = "RdYlGn", direction = -1) +
       xlab("Longitude (°E)") + ylab("Latitude (°N)") +
       #ggtitle(paste0("Catchment map of ", cov)) + 
       #theme_bw(base_size = 14)
