@@ -2,7 +2,7 @@
 ##               Generate EM data                ##
 ##                                               ##
 ##               Anthony Charsley                ##
-##                   May 2023                    ##
+##                September 2024                 ##
 ###################################################
 
 
@@ -19,9 +19,13 @@ library(sf)
 library(units)
 
 
+
 #################
 #  Directories  #
 #################
+
+# Processed data path
+data_taranaki_dir <- "./Data_processed"
 
 # Set data input path
 VAST_input_data_dir <- paste0(getwd(), "/Data_processed/VAST_input_data")
@@ -37,11 +41,6 @@ dir.create(EM_path, showWarnings = F)
 EM_data_path <- file.path(EM_path, "EM_data")
 dir.create(EM_data_path, showWarnings = F)
 
-# Directories for data needed to simulate pseudo-absences
-raw_data_dir <- "./Data_raw"
-data_taranaki_dir <- "./Data_processed"
-HSM_dir <- "./Eel_HSM_taranaki"
-
 
 
 ###################
@@ -52,14 +51,12 @@ HSM_dir <- "./Eel_HSM_taranaki"
 network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
 network_to_sample <- network %>% filter(parent_s!=0, FWENZ_isLake!=TRUE)
 
-##NZFFD encounter/non-encounter data
-NZFFD_data <- readRDS(file.path(data_taranaki_dir, "Taranaki_NZFFD_ene_data.rds"))
-
 ##Load unique 'child' nodes denoting longfin eel suitability habitat locations to remove
 suitable_hab_to_remove <- readRDS(file.path(data_taranaki_dir, "Child_s_suitable_hab_to_remove.rds"))
 
 ##Load unique 'child' nodes denoting locations far from roads to remove
 locations_far_from_roads <- readRDS(file.path(data_taranaki_dir, "Child_s_locations_far_from_roads.rds"))
+
 
 
 ##############################
@@ -85,11 +82,13 @@ network_to_sample <- network_to_sample %>%
            "org", "institution", "FishMethod", "Data_source", "Anguilla dieffenbachii")
 
 
+
 ##########################
 #  Load VAST input data  #
 ##########################
 
-VAST_input_data <- readRDS(file.path(VAST_input_data_dir, "VAST_input_data.rds"))
+VAST_input_data <- readRDS(file.path(VAST_input_data_dir, "VAST_input_data_OMs.rds"))
+
 
 
 ########################################################
@@ -100,12 +99,12 @@ VAST_input_data <- readRDS(file.path(VAST_input_data_dir, "VAST_input_data.rds")
 # Build data #
 ##############
 
-scenarios <- c("OM_1a", "OM_1b",
-               "OM_2a", "OM_2b",
+scenarios <- c("OM_1a", #"OM_1b", #these didn't converge
+               "OM_2a", #"OM_2b",
                "OM_3a", "OM_3b",
                "OM_4a", "OM_4b")
 
-set.seed(300523)
+set.seed(120924)
 for(sce in scenarios){ #sce = "OM_1a"
   
   print(sce)
@@ -114,20 +113,21 @@ for(sce in scenarios){ #sce = "OM_1a"
   sim_data_path <- file.path(model_path, paste0("Model_", sce, "/Simulated_data"))
   
   # Set data from scenario
-  Fish_data <- VAST_input_data[[sce]]$Data_Geostat
+  Fish_data <- VAST_input_data[[sce]]
   
   
   ############################
   # Loop over simulated data #
   ############################
   
-  for(i in 1:20){ #i <- 1 
+  for(i in 1:10){ #i <- 1 
     
     # Load simulated data
     Data_sim <- readRDS(file.path(sim_data_path, paste0("Data_sim_", i, ".RDS")))
     
     b_i <- as.numeric(Data_sim$b_i > 0)
     
+    # Simulated b_i align with data used to generate OM
     Data_sim_df <-data.frame("Lon" = Fish_data$Lon,
                              "Lat" = Fish_data$Lat,
                              "child_i" = Fish_data$Child_i,
@@ -150,7 +150,10 @@ for(sce in scenarios){ #sce = "OM_1a"
     # Simulate pseudo-absence data #
     ################################
     
-    sample_1 = sample_2 = sample_3 = sample_4 = sample_5 = sample_6 = sample_7 = sample_8 =list()
+    sample_rand1n = sample_rand5n = list()
+    sample_unsuithab1n = sample_unsuithab5n = list()
+    sample_nearroads1n = sample_nearroads5n = list()
+    sample_unsuithab_nearroads1n = sample_unsuithab_nearroads5n =list()
     
     # 1. Random generation
     #Loop over all the years in the encounter-only data
@@ -158,9 +161,9 @@ for(sce in scenarios){ #sce = "OM_1a"
       
       #print(years_to_sample[yr])
       
-      #Remove NZFFD locations for year of interest
-      to_remove1 <- NZFFD_data %>%
-        filter(Year == years_to_sample[yr] & `Anguilla dieffenbachii` == 1) %>%
+      #Remove structured data locations for year of interest
+      to_remove1 <- Data_sim_structured %>%
+        filter(Year == years_to_sample[yr] & Catch_KG == 1) %>%
         pull(child_i)
       
       #Remove encounter-only locations for all years except the year of interest
@@ -184,10 +187,10 @@ for(sce in scenarios){ #sce = "OM_1a"
         
         if(n > 0){
           ## a. As many as the encounter-only data
-          sample_1[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
+          sample_rand1n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
           
-          ## b. 10x as many as the encounter-only data
-          sample_2[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*10),]
+          ## b. 5x as many as the encounter-only data
+          sample_rand5n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*5),]
         }
         
         #Remove
@@ -200,8 +203,8 @@ for(sce in scenarios){ #sce = "OM_1a"
     }
     
     #Combine data sets
-    sample_1 <- do.call(rbind, sample_1)
-    sample_2 <- do.call(rbind, sample_2)
+    sample_rand1n <- do.call(rbind, sample_rand1n)
+    sample_rand5n <- do.call(rbind, sample_rand5n)
     
     
     # 2. Random generation at locations with unsuitable longfin eel habitat
@@ -210,9 +213,9 @@ for(sce in scenarios){ #sce = "OM_1a"
       
       #print(years_to_sample[yr])
       
-      #Remove NZFFD locations for year of interest
-      to_remove1 <- NZFFD_data %>%
-        filter(Year == years_to_sample[yr] & `Anguilla dieffenbachii` == 1) %>%
+      #Remove structured data locations for year of interest
+      to_remove1 <- Data_sim_structured %>%
+        filter(Year == years_to_sample[yr] & Catch_KG == 1) %>%
         pull(child_i)
       
       #Remove encounter-only locations for all years except the year of interest
@@ -236,10 +239,10 @@ for(sce in scenarios){ #sce = "OM_1a"
         
         if(n > 0){
           ## a. As many as the encounter-only data
-          sample_3[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
+          sample_unsuithab1n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
           
-          ## b. 10x as many as the encounter-only data
-          sample_4[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*10),]
+          ## b. 5x as many as the encounter-only data
+          sample_unsuithab5n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*5),]
         }
         
         #Remove
@@ -252,8 +255,8 @@ for(sce in scenarios){ #sce = "OM_1a"
     }
     
     #Combine data sets
-    sample_3 <- do.call(rbind, sample_3)
-    sample_4 <- do.call(rbind, sample_4)
+    sample_unsuithab1n <- do.call(rbind, sample_unsuithab1n)
+    sample_unsuithab5n <- do.call(rbind, sample_unsuithab5n)
     
     
     
@@ -263,9 +266,9 @@ for(sce in scenarios){ #sce = "OM_1a"
       
       #print(years_to_sample[yr])
       
-      #Remove NZFFD locations for year of interest
-      to_remove1 <- NZFFD_data %>%
-        filter(Year == years_to_sample[yr] & `Anguilla dieffenbachii` == 1) %>%
+      #Remove structured data locations for year of interest
+      to_remove1 <- Data_sim_structured %>%
+        filter(Year == years_to_sample[yr] & Catch_KG == 1) %>%
         pull(child_i)
       
       #Remove encounter-only locations for all years except the year of interest
@@ -289,10 +292,10 @@ for(sce in scenarios){ #sce = "OM_1a"
         
         if(n > 0){
           ## a. As many as the encounter-only data
-          sample_5[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
+          sample_nearroads1n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
           
-          ## b. 10x as many as the encounter-only data
-          sample_6[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*10),]
+          ## b. 5x as many as the encounter-only data
+          sample_nearroads5n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*5),]
         }
         
         #Remove
@@ -305,8 +308,8 @@ for(sce in scenarios){ #sce = "OM_1a"
     }
     
     #Combine data sets
-    sample_5 <- do.call(rbind, sample_5)
-    sample_6 <- do.call(rbind, sample_6)
+    sample_nearroads1n <- do.call(rbind, sample_nearroads1n)
+    sample_nearroads5n <- do.call(rbind, sample_nearroads5n)
     
     
     
@@ -317,9 +320,9 @@ for(sce in scenarios){ #sce = "OM_1a"
       
       #print(years_to_sample[yr])
       
-      #Remove NZFFD locations for year of interest
-      to_remove1 <- NZFFD_data %>%
-        filter(Year == years_to_sample[yr] & `Anguilla dieffenbachii` == 1) %>%
+      #Remove structured data locations for year of interest
+      to_remove1 <- Data_sim_structured %>%
+        filter(Year == years_to_sample[yr] & Catch_KG == 1) %>%
         pull(child_i)
       
       #Remove encounter-only locations for all years except the year of interest
@@ -343,10 +346,10 @@ for(sce in scenarios){ #sce = "OM_1a"
         
         if(n > 0){
           ## a. As many as the encounter-only data
-          sample_7[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
+          sample_unsuithab_nearroads1n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
           
-          ## b. 10x as many as the encounter-only data
-          sample_8[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*10),]
+          ## b. 5x as many as the encounter-only data
+          sample_unsuithab_nearroads5n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*5),]
         }
         
         #Remove
@@ -359,8 +362,8 @@ for(sce in scenarios){ #sce = "OM_1a"
     }
     
     #Combine data sets
-    sample_7 <- do.call(rbind, sample_7)
-    sample_8 <- do.call(rbind, sample_8)
+    sample_unsuithab_nearroads1n <- do.call(rbind, sample_unsuithab_nearroads1n)
+    sample_unsuithab_nearroads5n <- do.call(rbind, sample_unsuithab_nearroads5n)
     
     
     
@@ -370,9 +373,12 @@ for(sce in scenarios){ #sce = "OM_1a"
     ##########################
     
     # Need to add together Data_sim_df structured data, Data_sim_unstructured, sampled data
-    samples <- paste0("sample_", c(1:8))
+    samples <- c("sample_rand1n", "sample_rand5n",
+                 "sample_unsuithab1n", "sample_unsuithab5n",
+                 "sample_nearroads1n", "sample_nearroads5n",
+                 "sample_unsuithab_nearroads1n", "sample_unsuithab_nearroads5n")
     Data_inp_list <- list()
-    for(s in samples){
+    for(s in samples){ #s = "sample_rand1n"
       dat <- get(s)
       
       Data_inp_list[[s]] <- data.frame("Lon" = c(Data_sim_structured$Lon, Data_sim_unstructured$Lon, dat$Lon),

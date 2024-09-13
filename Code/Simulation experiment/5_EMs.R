@@ -2,7 +2,7 @@
 ##               Estimating models               ##
 ##                                               ##
 ##               Anthony Charsley                ##
-##                   May 2023                    ##
+##                September 2024                 ##
 ###################################################
 
 
@@ -33,38 +33,86 @@ source(paste0(getwd(), "/Code/funcs.R"))
 #  Modelling scenario  #
 ########################
 
-inputArgs <- commandArgs(trailingOnly=TRUE)
-run_command <- inputArgs[1] ; print(run_command)
-data_sample <- inputArgs[2] ; print(data_sample)
-#data_sample "sample_1" = Random generation, n
-#data_sample "sample_2" = Random generation, 10n
-#data_sample "sample_3" = Random generation at locations with unsuitable longfin eel habitat, n
-#data_sample "sample_4" = Random generation at locations with unsuitable longfin eel habitat, 10n
-#data_sample "sample_5" = Random generation at locations within 2km of a registered road, n
-#data_sample "sample_6" = Random generation at locations within 2km of a registered road, 10n
-#data_sample "sample_7" = Random generation at locations within 2km of a registered road and with unsuitable longfin eel habitat, n
-#data_sample "sample_8" = Random generation at locations within 2km of a registered road and with unsuitable longfin eel habitat, 10n
-
 # For testing:
-#run_command = "HPC"
-#data_sample = "sample_8"
+#data_sample = "sample_rand1n"
 
-if(is.na(run_command)){stop("Error: Run command is not specified.")}
-if(is.na(data_sample)){stop("Error: Data sample is not specified.")}
+task_id = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID")) #task_id=1
 
-if(run_command == "HPC"){
-  task_id = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID")) #task_id=5
-  
-  if(task_id %in% c(1:20)){scenario <- "OM_1a" ; rep <- task_id}
-  if(task_id %in% c(21:40)){scenario <- "OM_1b" ; rep <- task_id - 20}
-  if(task_id %in% c(41:60)){scenario <- "OM_2a" ; rep <- task_id - 40}
-  if(task_id %in% c(61:80)){scenario <- "OM_2b" ; rep <- task_id - 60}
-  if(task_id %in% c(81:100)){scenario <- "OM_3a" ; rep <- task_id - 80}
-  if(task_id %in% c(101:120)){scenario <- "OM_3b" ; rep <- task_id - 100}
-  if(task_id %in% c(121:140)){scenario <- "OM_4a" ; rep <- task_id - 120}
-  if(task_id %in% c(141:160)){scenario <- "OM_4b" ; rep <- task_id - 140}
-  
-}
+if(task_id %in% c(1:10)){scenario <- "OM_1a" ; data_sample = "sample_rand1n"}
+if(task_id %in% c(11:20)){scenario <- "OM_1a" ; data_sample = "sample_rand5n"}
+if(task_id %in% c(21:30)){scenario <- "OM_1a" ; data_sample = "sample_unsuithab1n"}
+if(task_id %in% c(31:40)){scenario <- "OM_1a" ; data_sample = "sample_unsuithab5n"}
+if(task_id %in% c(41:50)){scenario <- "OM_1a" ; data_sample = "sample_nearroads1n"}
+if(task_id %in% c(51:60)){scenario <- "OM_1a" ; data_sample = "sample_nearroads5n"}
+if(task_id %in% c(61:70)){scenario <- "OM_1a" ; data_sample = "sample_unsuithab_nearroads1n"}
+if(task_id %in% c(71:80)){scenario <- "OM_1a" ; data_sample = "sample_unsuithab_nearroads5n"}
+
+if(task_id %in% c(81:90)){scenario <- "OM_1b" ; data_sample = "sample_rand1n"}
+if(task_id %in% c(91:100)){scenario <- "OM_1b" ; data_sample = "sample_rand5n"}
+if(task_id %in% c(101:110)){scenario <- "OM_1b" ; data_sample = "sample_unsuithab1n"}
+if(task_id %in% c(111:120)){scenario <- "OM_1b" ; data_sample = "sample_unsuithab5n"}
+if(task_id %in% c(121:130)){scenario <- "OM_1b" ; data_sample = "sample_nearroads1n"}
+if(task_id %in% c(131:140)){scenario <- "OM_1b" ; data_sample = "sample_nearroads5n"}
+if(task_id %in% c(141:150)){scenario <- "OM_1b" ; data_sample = "sample_unsuithab_nearroads1n"}
+if(task_id %in% c(151:160)){scenario <- "OM_1b" ; data_sample = "sample_unsuithab_nearroads5n"}
+
+if(task_id %in% c(161:170)){scenario <- "OM_2a" ; data_sample = "sample_rand1n"}
+if(task_id %in% c(171:180)){scenario <- "OM_2a" ; data_sample = "sample_rand5n"}
+if(task_id %in% c(181:190)){scenario <- "OM_2a" ; data_sample = "sample_unsuithab1n"}
+if(task_id %in% c(191:200)){scenario <- "OM_2a" ; data_sample = "sample_unsuithab5n"}
+if(task_id %in% c(201:210)){scenario <- "OM_2a" ; data_sample = "sample_nearroads1n"}
+if(task_id %in% c(211:220)){scenario <- "OM_2a" ; data_sample = "sample_nearroads5n"}
+if(task_id %in% c(221:230)){scenario <- "OM_2a" ; data_sample = "sample_unsuithab_nearroads1n"}
+if(task_id %in% c(231:240)){scenario <- "OM_2a" ; data_sample = "sample_unsuithab_nearroads5n"}
+
+if(task_id %in% c(241:250)){scenario <- "OM_2b" ; data_sample = "sample_rand1n"}
+if(task_id %in% c(251:260)){scenario <- "OM_2b" ; data_sample = "sample_rand5n"}
+if(task_id %in% c(261:270)){scenario <- "OM_2b" ; data_sample = "sample_unsuithab1n"}
+if(task_id %in% c(271:280)){scenario <- "OM_2b" ; data_sample = "sample_unsuithab5n"}
+if(task_id %in% c(281:290)){scenario <- "OM_2b" ; data_sample = "sample_nearroads1n"}
+if(task_id %in% c(291:300)){scenario <- "OM_2b" ; data_sample = "sample_nearroads5n"}
+if(task_id %in% c(301:310)){scenario <- "OM_2b" ; data_sample = "sample_unsuithab_nearroads1n"}
+if(task_id %in% c(311:320)){scenario <- "OM_2b" ; data_sample = "sample_unsuithab_nearroads5n"}
+
+if(task_id %in% c(321:330)){scenario <- "OM_3a" ; data_sample = "sample_rand1n"}
+if(task_id %in% c(331:340)){scenario <- "OM_3a" ; data_sample = "sample_rand5n"}
+if(task_id %in% c(341:350)){scenario <- "OM_3a" ; data_sample = "sample_unsuithab1n"}
+if(task_id %in% c(351:360)){scenario <- "OM_3a" ; data_sample = "sample_unsuithab5n"}
+if(task_id %in% c(361:370)){scenario <- "OM_3a" ; data_sample = "sample_nearroads1n"}
+if(task_id %in% c(371:380)){scenario <- "OM_3a" ; data_sample = "sample_nearroads5n"}
+if(task_id %in% c(381:390)){scenario <- "OM_3a" ; data_sample = "sample_unsuithab_nearroads1n"}
+if(task_id %in% c(391:400)){scenario <- "OM_3a" ; data_sample = "sample_unsuithab_nearroads5n"}
+
+if(task_id %in% c(401:410)){scenario <- "OM_3b" ; data_sample = "sample_rand1n"}
+if(task_id %in% c(411:420)){scenario <- "OM_3b" ; data_sample = "sample_rand5n"}
+if(task_id %in% c(421:430)){scenario <- "OM_3b" ; data_sample = "sample_unsuithab1n"}
+if(task_id %in% c(431:440)){scenario <- "OM_3b" ; data_sample = "sample_unsuithab5n"}
+if(task_id %in% c(441:450)){scenario <- "OM_3b" ; data_sample = "sample_nearroads1n"}
+if(task_id %in% c(451:460)){scenario <- "OM_3b" ; data_sample = "sample_nearroads5n"}
+if(task_id %in% c(461:470)){scenario <- "OM_3b" ; data_sample = "sample_unsuithab_nearroads1n"}
+if(task_id %in% c(471:480)){scenario <- "OM_3b" ; data_sample = "sample_unsuithab_nearroads5n"}
+
+if(task_id %in% c(481:490)){scenario <- "OM_4a" ; data_sample = "sample_rand1n"}
+if(task_id %in% c(491:500)){scenario <- "OM_4a" ; data_sample = "sample_rand5n"}
+if(task_id %in% c(501:510)){scenario <- "OM_4a" ; data_sample = "sample_unsuithab1n"}
+if(task_id %in% c(511:520)){scenario <- "OM_4a" ; data_sample = "sample_unsuithab5n"}
+if(task_id %in% c(521:530)){scenario <- "OM_4a" ; data_sample = "sample_nearroads1n"}
+if(task_id %in% c(531:540)){scenario <- "OM_4a" ; data_sample = "sample_nearroads5n"}
+if(task_id %in% c(541:550)){scenario <- "OM_4a" ; data_sample = "sample_unsuithab_nearroads1n"}
+if(task_id %in% c(551:560)){scenario <- "OM_4a" ; data_sample = "sample_unsuithab_nearroads5n"}
+
+if(task_id %in% c(561:570)){scenario <- "OM_4b" ; data_sample = "sample_rand1n"}
+if(task_id %in% c(571:580)){scenario <- "OM_4b" ; data_sample = "sample_rand5n"}
+if(task_id %in% c(581:590)){scenario <- "OM_4b" ; data_sample = "sample_unsuithab1n"}
+if(task_id %in% c(591:600)){scenario <- "OM_4b" ; data_sample = "sample_unsuithab5n"}
+if(task_id %in% c(601:610)){scenario <- "OM_4b" ; data_sample = "sample_nearroads1n"}
+if(task_id %in% c(611:620)){scenario <- "OM_4b" ; data_sample = "sample_nearroads5n"}
+if(task_id %in% c(621:630)){scenario <- "OM_4b" ; data_sample = "sample_unsuithab_nearroads1n"}
+if(task_id %in% c(631:640)){scenario <- "OM_4b" ; data_sample = "sample_unsuithab_nearroads5n"}
+
+
+rep <- task_id %% 10
+if(rep == 0) rep <- 10
 
 
 
@@ -85,9 +133,10 @@ EM_path <- file.path(model_path, "EMs")
 EM_data_path <- file.path(EM_path, "EM_data")
 
 # Set output path for scenario
-path <- file.path(EM_path, paste0("Output_", scenario))
+path <- file.path(EM_path, paste0("EM_output_", scenario))
 dir.create(path, showWarnings = F)
-path <- file.path(EM_path, paste0("Output_", scenario), paste0("Rep_", rep, "_", data_sample))
+path <- file.path(EM_path, paste0("EM_output_", scenario), paste0("Rep_", rep, "_", data_sample))
+#path <- file.path(EM_path, paste0("EM_output_", scenario), data_sample)
 dir.create(path, showWarnings = F)
 
 
@@ -96,10 +145,10 @@ dir.create(path, showWarnings = F)
 #  Load VAST input data and set network data #
 ##############################################
 
-VAST_input_data <- readRDS(file.path(VAST_input_data_dir, "VAST_input_data.rds"))
+VAST_input_data <- readRDS(file.path(VAST_input_data_dir, "VAST_input_data_OMs.rds"))
 
 #Set network data
-network = VAST_input_data[[scenario]]$network
+network = VAST_input_data$network
 Network_sz = network %>% select(parent_s,child_s,dist_s)
 Network_sz_LL = network %>% select(parent_s, child_s, dist_s, Lat, Lon)
 
@@ -129,16 +178,18 @@ plotting_data <- Data_inp %>%
 
 catchmap <- ggplot(plotting_data) +
   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-  geom_point(aes(x = Lon, y = Lat, col = Present), alpha = 0.6) +
+  geom_point(aes(x = Lon, y = Lat, col = Present), alpha = 0.8, size=3) +
   facet_wrap(.~Year) +
-  xlab("Longitude") + ylab("Latitude") +
-  ggtitle("Longfin eel data by year") +
+  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
+  #ggtitle("Longfin eel data by year") +
   guides(color = guide_legend(title = "")) +
-  scale_colour_manual(values = c("#E41A1C", "green")) +
+  scale_colour_manual(values = c("#E41A1C", "chartreuse4")) +
   theme_bw(base_size = 14) +
-  theme(axis.text = element_text(size = rel(0.5)),
-        axis.text.x = element_text(angle = 90))
-ggsave(file.path(path, "Catchment_data_map.png"), catchmap, height = 12, width = 15)
+  theme(axis.text = element_text(size = rel(1.25)),
+        axis.title=element_text(size = rel(1.5),face="bold"),
+        axis.text.x = element_text(angle = 90),
+        legend.text=element_text(size = rel(1)))
+ggsave(file.path(path, paste0("Catchment_data_map_rep",rep,".png")), catchmap, height = 12, width = 15)
 ####
 
 
@@ -147,24 +198,11 @@ ggsave(file.path(path, "Catchment_data_map.png"), catchmap, height = 12, width =
 # Set model inputs #
 ####################
 
-
 # Set covariate input
 covariate_df <- Fit$covariate_data
 
-covars_all <- colnames(covariate_df)[4:ncol(covariate_df)]
-
-covariate_df <- covariate_df %>%
-  select(c(Year, Lon, Lat, all_of(covars_all[covars_all != "std_Years_since_barrier"])))
-
-#using bsplines with 2 degrees of freedom based on the Graynoth & Booker (2009) biomass model
-# X1_formula_inp = ~ bs(std_log_loc_elev, degree = 2, intercept = FALSE ) + 
-#   bs(std_SegRipShade_sqrd, degree = 2, intercept = FALSE ) + bs(std_log_MeanFlowCumecs, degree = 2, intercept = FALSE ) + 
-#   bs(std_FWENZ_segSubstrate, degree = 2, intercept = FALSE ) + bs(std_local_twarm, degree = 2, intercept = FALSE ) + 
-#   factor(Barrier_present)
 X1_formula_inp = ~ bs(std_log_loc_elev, degree = 3, intercept = FALSE ) + 
-  bs(std_SegRipShade_sqrd, degree = 3, intercept = FALSE ) + bs(std_log_MeanFlowCumecs, degree = 3, intercept = FALSE ) + 
-  bs(std_FWENZ_segSubstrate, degree = 3, intercept = FALSE ) + bs(std_local_twarm, degree = 3, intercept = FALSE ) + 
-  factor(Barrier_present)
+  bs(std_FWENZ_SegRipShade, degree = 3, intercept = FALSE ) + bs(std_FWENZ_segSubstrate, degree = 3, intercept = FALSE )
 X2_formula_inp = ~0
 
 
@@ -325,7 +363,7 @@ Opt = TMBhelper::fit_tmb(obj = Obj,
                          getsd = TRUE, 
                          savedir = path, 
                          bias.correct = bias_correct, 
-                         newtonsteps = 1, 
+                         newtonsteps = 3, 
                          bias.correct.control = bias_correct_control, 
                          getJointPrecision = TRUE) 
 Report = Obj$report()
