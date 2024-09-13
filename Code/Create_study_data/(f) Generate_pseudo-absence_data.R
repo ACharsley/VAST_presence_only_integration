@@ -110,7 +110,7 @@ network_to_sample <- network_to_sample %>%
 # 1. Random generation
 ########################
 
-sample_1a = sample_1b = sample_1c = sample_1d = sample_OM_1a = sample_OM_1b = list()
+sample_1a = sample_1b = sample_1c = sample_1d = list()
 
 set.seed(141122)
 
@@ -160,14 +160,6 @@ for(i in c(1:length(years_to_sample))){
     ## d. 20x as many as the encounter-only data
     sample_1d[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*20),]
     
-    
-    # Operating model data
-    ## a. As many as the encounter-only data
-    sample_OM_1a[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
-    
-    ## b. 10x as many as the encounter-only data
-    sample_OM_1b[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*10),]
-    
   }
   
   #Remove
@@ -180,9 +172,6 @@ sample_1a <- do.call(rbind, sample_1a)
 sample_1b <- do.call(rbind, sample_1b)
 sample_1c <- do.call(rbind, sample_1c)
 sample_1d <- do.call(rbind, sample_1d)
-
-sample_OM_1a <- do.call(rbind, sample_OM_1a)
-sample_OM_1b <- do.call(rbind, sample_OM_1b)
 
 
 #########################################################################
@@ -201,7 +190,7 @@ suitable_hab_to_remove <- HSM_encounter_prob %>%
 saveRDS(suitable_hab_to_remove, file.path(data_taranaki_dir, "Child_s_suitable_hab_to_remove.rds"))
 
 
-sample_2a = sample_2b = sample_2c = sample_2d =  sample_OM_2a = sample_OM_2b = list()
+sample_2a = sample_2b = sample_2c = sample_2d =  list()
 
 set.seed(100323)
 
@@ -251,14 +240,6 @@ for(i in c(1:length(years_to_sample))){
     ## d. 20x as many as the encounter-only data
     sample_2d[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*20),]
     
-    
-    # Operating model data
-    ## a. As many as the encounter-only data
-    sample_OM_2a[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
-    
-    ## b. 10x as many as the encounter-only data
-    sample_OM_2b[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*10),]
-    
   }
   
   #Remove
@@ -271,9 +252,6 @@ sample_2a <- do.call(rbind, sample_2a)
 sample_2b <- do.call(rbind, sample_2b)
 sample_2c <- do.call(rbind, sample_2c)
 sample_2d <- do.call(rbind, sample_2d)
-
-sample_OM_2a <- do.call(rbind, sample_OM_2a)
-sample_OM_2b <- do.call(rbind, sample_OM_2b)
 
 
 #######################################################################
@@ -337,7 +315,7 @@ locations_far_from_roads <- network_to_sample_SF %>%
 #Save
 saveRDS(locations_far_from_roads, file.path(data_taranaki_dir, "Child_s_locations_far_from_roads.rds"))
 
-sample_3a = sample_3b = sample_3c = sample_3d =  sample_OM_3a = sample_OM_3b = list()
+sample_3a = sample_3b = sample_3c = sample_3d = list()
 
 set.seed(100323)
 
@@ -386,14 +364,6 @@ for(i in c(1:length(years_to_sample))){
     ## d. 20x as many as the encounter-only data
     sample_3d[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*20),]
     
-    
-    # Operating model data
-    ## a. As many as the encounter-only data
-    sample_OM_3a[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
-    
-    ## b. 10x as many as the encounter-only data
-    sample_OM_3b[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*10),]
-    
   }
   
   #Remove
@@ -407,16 +377,13 @@ sample_3b <- do.call(rbind, sample_3b)
 sample_3c <- do.call(rbind, sample_3c)
 sample_3d <- do.call(rbind, sample_3d)
 
-sample_OM_3a <- do.call(rbind, sample_OM_3a)
-sample_OM_3b <- do.call(rbind, sample_OM_3b)
-
 
 ######################################################################
 # 4. Random generation at locations within 500m of a registered road #
 #    and with unsuitable longfin eel habitat                         #
 ######################################################################
 
-sample_4a = sample_4b = sample_4c = sample_4d =  sample_OM_4a = sample_OM_4b = list()
+sample_4a = sample_4b = sample_4c = sample_4d = list()
 
 set.seed(100323)
 
@@ -465,14 +432,6 @@ for(i in c(1:length(years_to_sample))){
     ## d. 20x as many as the encounter-only data
     sample_4d[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*20),]
     
-    
-    # Operating model data
-    ## a. As many as the encounter-only data
-    sample_OM_4a[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
-    
-    ## b. 10x as many as the encounter-only data
-    sample_OM_4b[[i]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*10),]
-    
   }
   
   #Remove
@@ -485,9 +444,6 @@ sample_4a <- do.call(rbind, sample_4a)
 sample_4b <- do.call(rbind, sample_4b)
 sample_4c <- do.call(rbind, sample_4c)
 sample_4d <- do.call(rbind, sample_4d)
-
-sample_OM_4a <- do.call(rbind, sample_OM_4a)
-sample_OM_4b <- do.call(rbind, sample_OM_4b)
 
 
 ##############################
@@ -506,12 +462,6 @@ saveRDS(sample_1c, file.path(pseudoabsence_data_dir, "Sample_1c.rds"))
 
 #d.
 saveRDS(sample_1d, file.path(pseudoabsence_data_dir, "Sample_1d.rds"))
-
-#OM - a.
-saveRDS(sample_OM_1a, file.path(pseudoabsence_data_dir, "Sample_OM_1a.rds"))
-
-#OM - b.
-saveRDS(sample_OM_1b, file.path(pseudoabsence_data_dir, "Sample_OM_1b.rds"))
 ####
 
 
@@ -527,12 +477,6 @@ saveRDS(sample_2c, file.path(pseudoabsence_data_dir, "Sample_2c.rds"))
 
 #d.
 saveRDS(sample_2d, file.path(pseudoabsence_data_dir, "Sample_2d.rds"))
-
-#OM - a.
-saveRDS(sample_OM_2a, file.path(pseudoabsence_data_dir, "Sample_OM_2a.rds"))
-
-#OM - b.
-saveRDS(sample_OM_2b, file.path(pseudoabsence_data_dir, "Sample_OM_2b.rds"))
 ####
 
 
@@ -548,12 +492,6 @@ saveRDS(sample_3c, file.path(pseudoabsence_data_dir, "Sample_3c.rds"))
 
 #d.
 saveRDS(sample_3d, file.path(pseudoabsence_data_dir, "Sample_3d.rds"))
-
-#OM - a.
-saveRDS(sample_OM_3a, file.path(pseudoabsence_data_dir, "Sample_OM_3a.rds"))
-
-#OM - b.
-saveRDS(sample_OM_3b, file.path(pseudoabsence_data_dir, "Sample_OM_3b.rds"))
 ####
 
 
@@ -569,12 +507,6 @@ saveRDS(sample_4c, file.path(pseudoabsence_data_dir, "Sample_4c.rds"))
 
 #d.
 saveRDS(sample_4d, file.path(pseudoabsence_data_dir, "Sample_4d.rds"))
-
-#OM - a.
-saveRDS(sample_OM_4a, file.path(pseudoabsence_data_dir, "Sample_OM_4a.rds"))
-
-#OM - b.
-saveRDS(sample_OM_4b, file.path(pseudoabsence_data_dir, "Sample_OM_4b.rds"))
 ####
 
 
