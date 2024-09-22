@@ -21,7 +21,7 @@ nano VAST_EMs.sl
 #!/bin/bash -e
 #SBATCH --job-name=VAST_EMs # job name (shows up in the queue)
 #SBATCH --account=niwa03825  #niwa03825 (Toitu Nga Taonga Waimaori) or niwa03347 (Population modelling group)
-#SBATCH --time=6:00:00      # Walltime (HH:MM:SS)
+#SBATCH --time=3:00:00      # Walltime (HH:MM:SS)
 #SBATCH --mem=32000MB          # Memory in MB - trying 100 GB at first
 #SBATCH --cpus-per-task=3                # test using 2 then 4 and see if the speed increases, if not R
 #SBATCH --mail-user=Anthony.Charsley@niwa.co.nz
