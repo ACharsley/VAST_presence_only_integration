@@ -189,7 +189,7 @@ catchmap <- ggplot(plotting_data) +
         axis.title=element_text(size = rel(1.5),face="bold"),
         axis.text.x = element_text(angle = 90),
         legend.text=element_text(size = rel(1)))
-ggsave(file.path(path, paste0("Catchment_data_map_rep",rep,".png")), catchmap, height = 12, width = 15)
+ggsave(file.path(path, paste0("Catchment_data_map_rep",rep,"_",data_sample,".png")), catchmap, height = 12, width = 15)
 ####
 
 
@@ -416,7 +416,7 @@ Fit <- list( "data_frame" = model_data,
              "Q2_formula" = Q2_formula,
              "total_time" = time)
 
-save(Fit, file = file.path(path, "Fit.RData"))
+#save(Fit, file = file.path(path, "Fit.RData"))
 #load(file.path(path, "Fit.RData"))
 
 
