@@ -1,0 +1,62 @@
+1. Ensure the library tidyverse works
+
+2. Ensure OMs are in folder /Models/
+
+3. Ensure EMs are in folder /Models/EMs/
+
+4. Ensure 7_Generate_metrics.R is in /Code/ folder
+
+5. Ensure funcs.R code is in /Code/ folder
+
+6. Run the following code on the HPC:
+
+cd /nesi/nobackup/niwa03825/ACharsley/VAST_presence_only_integration
+
+nano Generate_metrics.sl
+
+######## In sl script write the following:
+
+#!/bin/bash -e
+#SBATCH --job-name=Generate_metrics # job name (shows up in the queue)
+#SBATCH --account=niwa03825  #niwa03825 (Toitu Nga Taonga Waimaori) or niwa03347 (Population modelling group)
+#SBATCH --time=03:00:00      # Walltime (HH:MM:SS)
+#SBATCH --mem=5000MB          # Memory in MB
+#SBATCH --cpus-per-task=2                # better throughput with 2
+#SBATCH --mail-user=Anthony.Charsley@niwa.co.nz
+#SBATCH --mail-type=ALL
+#SBATCH --output=Generate_metrics_%a.%j.out # Include the job ID in the names of
+#SBATCH --error=Generate_metrics_%a.%j.err # the output and error files
+#SBATCH --array=1-5                     # Array jobs
+
+
+taskset -c -p $$          #Prints which CPUs it can use
+module purge #clears any potential environment issues
+module load FriBidi/1.0.12-GCC-11.3.0
+module load HarfBuzz/4.4.1-GCC-11.3.0
+module load UDUNITS/2.2.26-GCCcore-7.4.0 
+module load devtools
+module load  R-Geo/4.2.1-gimkl-2022a
+
+# Help R to flush errors and show overall job progress by printing
+# "executing" and "finished" statements.
+echo "Executing R ..."
+Rscript /nesi/nobackup/niwa03825/ACharsley/VAST_presence_only_integration/Code/7_Generate_metrics.R 
+echo "R finished."
+
+
+############## Press ctrl+x and save as Generate_metrics.sl
+
+sbatch Generate_metrics.sl
+
+###### Check queue
+
+squeue -u charsleyar
+
+#### If I need to cancel
+
+scancel JOBID_[1-25]
+
+
+#### To check job efficiency
+
+nn_seff JOBID

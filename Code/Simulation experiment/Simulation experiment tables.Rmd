@@ -1,0 +1,212 @@
+---
+title: "Simulation experiment results"
+author: "Anthony Charsley"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, root.dir = rprojroot::find_rstudio_root_file())
+
+# clear R
+rm(list=ls())
+
+# Load libraries 
+library(knitr)
+library(tidyverse)
+
+# Set paths
+EM_path <- "C:/Users/charsleyar/OneDrive - NIWA/Toitu_Nga_Taonga_Waimaori/Projects/VAST_presence_only_integration/Models/EMs"
+
+####################################
+# Load list of performance metrics #
+####################################
+
+PM_list <- readRDS(file.path(EM_path, "Perf_metrics.RDS"))
+
+```
+
+
+```{r Model_output_table_setup, include=FALSE, echo=FALSE}
+# Operating models
+scenarios <- c("OM_1a", #"OM_1b", #these didn't converge
+               "OM_2a", #"OM_2b",
+               "OM_3a", "OM_3b",
+               "OM_4a" #,"OM_4b"
+)
+
+# Estimating models
+data_sample <- c("sample_rand1n",
+                 "sample_rand5n",
+                 "sample_unsuithab1n",
+                 "sample_unsuithab5n",
+                 "sample_nearroads1n",
+                 "sample_nearroads5n",
+                 "sample_unsuithab_nearroads1n",
+                 "sample_unsuithab_nearroads5n")
+
+output_df <- data.frame("OMs"=rep(scenarios, length(data_sample)), 
+                        "EMs" = rep(data_sample, each=length(scenarios)),
+                        
+                        "Pearson" = NA,
+                        "Pearson_low" = NA,
+                        "Pearson_high" = NA,
+                        
+                        "Spearman" = NA,
+                        "Spearman_low" = NA,
+                        "Spearman_high" = NA,
+                        
+                        "RMSE" = NA,
+                        "RMSE_low" = NA,
+                        "RMSE_high" = NA,
+                        
+                        "AVE" = NA,
+                        "AVE_low" = NA,
+                        "AVE_high" = NA,
+                        
+                        "Bias" = NA,
+                        "Bias_low" = NA,
+                        "Bias_high" = NA,
+                        
+                        "Spread" = NA,
+                        "Spread_low" = NA,
+                        "Spread_high" = NA,
+                        
+                        "Trend_rel" = NA,
+                        "Trend_rel_low" = NA,
+                        "Trend_rel_high" = NA)
+
+
+## Loop over all OMs/EMs to generate metrics for table
+for(sce in scenarios){ # sce = "OM_1a"
+  
+  for(mod in data_sample){ # mod = "sample_rand1n"
+    
+    df_temp <- output_df[output_df$OMs == sce & output_df$EMs == mod, ]
+    
+    ## Pearson's correlation
+    #mean(sapply(PM_list[["Pearson"]][[paste0(sce, "_", mod)]], mean))
+    df_temp[,"Pearson"] <- median(unlist(PM_list[["Pearson"]][[paste0(sce, "_", mod)]]))
+    df_temp[,"Pearson_low"] <- min(unlist(PM_list[["Pearson"]][[paste0(sce, "_", mod)]]))
+    df_temp[,"Pearson_high"] <- max(unlist(PM_list[["Pearson"]][[paste0(sce, "_", mod)]]))
+    
+    ## Spearman's correlation
+    df_temp[,"Spearman"] <- median(unlist(PM_list[["Spearman"]][[paste0(sce, "_", mod)]]))
+    df_temp[,"Spearman_low"] <- min(unlist(PM_list[["Spearman"]][[paste0(sce, "_", mod)]]))
+    df_temp[,"Spearman_high"] <- max(unlist(PM_list[["Spearman"]][[paste0(sce, "_", mod)]]))
+    
+    ## RMSE
+    df_temp[,"RMSE"] <- median(unlist(PM_list[["RMSE"]][[paste0(sce, "_", mod)]]))
+    df_temp[,"RMSE_low"] <- min(unlist(PM_list[["RMSE"]][[paste0(sce, "_", mod)]]))
+    df_temp[,"RMSE_high"] <- max(unlist(PM_list[["RMSE"]][[paste0(sce, "_", mod)]]))
+    
+    ## AVE
+    df_temp[,"AVE"] <- median(unlist(PM_list[["AVE"]][[paste0(sce, "_", mod)]]))
+    df_temp[,"AVE_low"] <- min(unlist(PM_list[["AVE"]][[paste0(sce, "_", mod)]]))
+    df_temp[,"AVE_high"] <- max(unlist(PM_list[["AVE"]][[paste0(sce, "_", mod)]]))
+    
+    ## Bias
+    df_temp[,"Bias"] <- median(unlist(PM_list[["Bias"]][[paste0(sce, "_", mod)]]))
+    df_temp[,"Bias_low"] <- min(unlist(PM_list[["Bias"]][[paste0(sce, "_", mod)]]))
+    df_temp[,"Bias_high"] <- max(unlist(PM_list[["Bias"]][[paste0(sce, "_", mod)]]))
+    
+    ## Spread
+    df_temp[,"Spread"] <- median(unlist(PM_list[["Spread"]][[paste0(sce, "_", mod)]]))
+    df_temp[,"Spread_low"] <- min(unlist(PM_list[["Spread"]][[paste0(sce, "_", mod)]]))
+    df_temp[,"Spread_high"] <- max(unlist(PM_list[["Spread"]][[paste0(sce, "_", mod)]]))
+    
+    ## Trend reliability
+    df_temp[,"Trend_rel"] <- median(unlist(PM_list[["Trend_rel"]][[paste0(sce, "_", mod)]]))
+    df_temp[,"Trend_rel_low"] <- min(unlist(PM_list[["Trend_rel"]][[paste0(sce, "_", mod)]]))
+    df_temp[,"Trend_rel_high"] <- max(unlist(PM_list[["Trend_rel"]][[paste0(sce, "_", mod)]]))
+    
+    output_df[output_df$OMs == sce & output_df$EMs == mod, ] <- df_temp
+    
+  }
+  
+}
+
+saveRDS(output_df, file.path(EM_path, "Perf_metrics_processed.RDS"))
+```
+
+```{r Output_table, echo=FALSE}
+output_table_df <- output_df %>%
+  mutate(
+    "OMs" = ifelse(OMs == "OM_1a", "Random generation (1n)", 
+                   ifelse(OMs == "OM_2a", "Unsuitable habitat (1n)",
+                          ifelse(OMs == "OM_3a", "Near roads (1n)",
+                                 ifelse(OMs == "OM_3b", "Near roads (5n)",
+                                        ifelse(OMs == "OM_4a", "Unsuitable habitat and near roads (1n)", NA))))),
+    "EMs" = ifelse(EMs == "sample_rand1n", "Random generation (1n)", 
+                   ifelse(EMs == "sample_rand5n", "Random generation (5n)",
+                          ifelse(EMs == "sample_unsuithab1n", "Unsuitable habitat (1n)",
+                                 ifelse(EMs == "sample_unsuithab5n", "Unsuitable habitat (5n)",
+                                        ifelse(EMs == "sample_nearroads1n", "Near roads (1n)", 
+                                               ifelse(EMs == "sample_nearroads5n", "Near roads (5n)",
+                                                      ifelse(EMs == "sample_unsuithab_nearroads1n", "Unsuitable habitat and near roads (1n)",
+                                                             ifelse(EMs == "sample_unsuithab_nearroads5n", "Unsuitable habitat and near roads (5n)", NA))))))))
+  )
+
+options(scipen = 999)
+output_table_df <- output_table_df %>%
+  mutate(
+    "Pearson" = paste0(sprintf("%.2f", round(Pearson,2))," (",sprintf("%.2f", round(Pearson_low,2)),"-",sprintf("%.2f", round(Pearson_high,2)),")"),
+    "Spearman" = paste0(sprintf("%.2f", round(Spearman,2))," (",sprintf("%.2f", round(Spearman_low,2)),"-",sprintf("%.2f", round(Spearman_high,2)),")"),
+    "RMSE" = paste0(sprintf("%.2f", round(RMSE,2))," (",sprintf("%.2f", round(RMSE_low,2)),"-",sprintf("%.2f", round(RMSE_high,2)),")"),
+    "AVE" = paste0(sprintf("%.2f", round(AVE,2))," (",sprintf("%.2f", round(AVE_low,2)),"-",sprintf("%.2f", round(AVE_high,2)),")"),
+    "Bias" = paste0(sprintf("%.2f", round(Bias,2))," (",sprintf("%.2f", round(Bias_low,2)),"-",sprintf("%.2f", round(Bias_high,2)),")"),
+    "Spread" = paste0(sprintf("%.2f", round(Spread,2))," (",sprintf("%.2f", round(Spread_low,2)),"-",sprintf("%.2f", round(Spread_high,2)),")"),
+    "Trend_rel" = paste0(sprintf("%.4f", round(Trend_rel,4))," (",sprintf("%.4f", round(Trend_rel_low,4)),"-",sprintf("%.4f", round(Trend_rel_high,4)),")")
+  ) %>%
+  select(OMs,EMs,
+         Pearson,Spearman,Bias,Spread,RMSE,AVE
+         #,Trend_rel
+         )
+
+## Final tables
+table_EM_randgen1n <- output_table_df %>% 
+  filter(EMs == "Random generation (1n)")
+
+table_EM_randgen5n <- output_table_df %>% 
+  filter(EMs == "Random generation (5n)")
+
+
+table_EM_unsuithab1n <- output_table_df %>% 
+  filter(EMs == "Unsuitable habitat (1n)")
+
+table_EM_unsuithab5n <- output_table_df %>% 
+  filter(EMs == "Unsuitable habitat (5n)")
+
+
+table_EM_nearroads1n <- output_table_df %>% 
+  filter(EMs == "Near roads (1n)")
+
+table_EM_nearroads5n <- output_table_df %>% 
+  filter(EMs == "Near roads (5n)")
+
+
+table_EM_unsuithabnearroads1n <- output_table_df %>% 
+  filter(EMs == "Unsuitable habitat and near roads (1n)")
+
+table_EM_unsuithabnearroads5n <- output_table_df %>% 
+  filter(EMs == "Unsuitable habitat and near roads (5n)")
+
+
+```
+
+```{r display_tables, echo=FALSE}
+kable(table_EM_randgen1n, caption="")
+kable(table_EM_randgen5n, caption="")
+
+kable(table_EM_unsuithab1n, caption="")
+kable(table_EM_unsuithab5n, caption="")
+
+kable(table_EM_nearroads1n, caption="")
+kable(table_EM_nearroads5n, caption="")
+
+kable(table_EM_unsuithabnearroads1n, caption="")
+kable(table_EM_unsuithabnearroads5n, caption="")
+#kable(output_table_df, caption="")
+```
