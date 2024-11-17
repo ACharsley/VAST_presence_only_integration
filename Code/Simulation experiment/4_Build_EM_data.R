@@ -52,9 +52,11 @@ network <- readRDS(file.path(data_taranaki_dir, "Taranaki_network.rds"))
 network_to_sample <- network %>% filter(parent_s!=0, FWENZ_isLake!=TRUE)
 
 ##Load unique 'child' nodes denoting longfin eel suitability habitat locations to remove
+# Built in "(f) Generate_pseudo-absence_data"
 suitable_hab_to_remove <- readRDS(file.path(data_taranaki_dir, "Child_s_suitable_hab_to_remove.rds"))
 
 ##Load unique 'child' nodes denoting locations far from roads to remove
+# Built in "(f) Generate_pseudo-absence_data"
 locations_far_from_roads <- readRDS(file.path(data_taranaki_dir, "Child_s_locations_far_from_roads.rds"))
 
 
@@ -102,9 +104,12 @@ VAST_input_data <- readRDS(file.path(VAST_input_data_dir, "VAST_input_data_OMs.r
 scenarios <- c("OM_1a", #"OM_1b", #these didn't converge
                "OM_2a", #"OM_2b",
                "OM_3a", "OM_3b",
-               "OM_4a", "OM_4b")
+               "OM_4a"#, "OM_4b"
+               )
+nsim <- 100
 
-set.seed(120924)
+start_time <- Sys.time()
+set.seed(91024)
 for(sce in scenarios){ #sce = "OM_1a"
   
   print(sce)
@@ -120,7 +125,7 @@ for(sce in scenarios){ #sce = "OM_1a"
   # Loop over simulated data #
   ############################
   
-  for(i in 1:10){ #i <- 1 
+  for(i in 1:nsim){ #i <- 1 
     
     # Load simulated data
     Data_sim <- readRDS(file.path(sim_data_path, paste0("Data_sim_", i, ".RDS")))
@@ -150,10 +155,10 @@ for(sce in scenarios){ #sce = "OM_1a"
     # Simulate pseudo-absence data #
     ################################
     
-    sample_rand1n = sample_rand5n = list()
-    sample_unsuithab1n = sample_unsuithab5n = list()
-    sample_nearroads1n = sample_nearroads5n = list()
-    sample_unsuithab_nearroads1n = sample_unsuithab_nearroads5n =list()
+    sample_rand1n = sample_rand2n = sample_rand5n = list()
+    sample_unsuithab1n = sample_unsuithab2n = sample_unsuithab5n = list()
+    sample_nearroads1n = sample_nearroads2n = sample_nearroads5n = list()
+    sample_unsuithab_nearroads1n = sample_unsuithab_nearroads2n = sample_unsuithab_nearroads5n =list()
     
     # 1. Random generation
     #Loop over all the years in the encounter-only data
@@ -176,7 +181,7 @@ for(sce in scenarios){ #sce = "OM_1a"
       to_remove <- unique(to_remove)
       
       #If there is data in that year take a sample, if not no pseudo-absence data for that year
-      if(length(to_remove)>0){
+      if(length(to_remove)>0){#not really needed as we loop over "years_to_sample" so length(to_remove) will always be >0
         
         data_to_sample <- network_to_sample %>% 
           filter(!(child_i %in% to_remove)) %>%
@@ -186,10 +191,14 @@ for(sce in scenarios){ #sce = "OM_1a"
         n <- nrow(Data_sim_unstructured %>% filter(Year == years_to_sample[yr]))
         
         if(n > 0){
-          ## a. As many as the encounter-only data
+          
+          ## a. Half as many as the encounter-only data
           sample_rand1n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
           
-          ## b. 5x as many as the encounter-only data
+          ## b. As many as the encounter-only data
+          sample_rand2n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*2),]
+          
+          ## c. 5x as many as the encounter-only data
           sample_rand5n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*5),]
         }
         
@@ -204,6 +213,7 @@ for(sce in scenarios){ #sce = "OM_1a"
     
     #Combine data sets
     sample_rand1n <- do.call(rbind, sample_rand1n)
+    sample_rand2n <- do.call(rbind, sample_rand2n)
     sample_rand5n <- do.call(rbind, sample_rand5n)
     
     
@@ -228,7 +238,7 @@ for(sce in scenarios){ #sce = "OM_1a"
       to_remove <- unique(to_remove)
       
       #If there is data in that year take a sample, if not no pseudo-absence data for that year
-      if(length(to_remove)>0){
+      if(length(to_remove)>0){#not really needed as we loop over "years_to_sample" so length(to_remove) will always be >0
         
         data_to_sample <- network_to_sample %>% 
           filter(!(child_i %in% to_remove)) %>%
@@ -238,10 +248,14 @@ for(sce in scenarios){ #sce = "OM_1a"
         n <- nrow(Data_sim_unstructured %>% filter(Year == years_to_sample[yr]))
         
         if(n > 0){
-          ## a. As many as the encounter-only data
+          
+          ## a. Half as many as the encounter-only data
           sample_unsuithab1n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
           
-          ## b. 5x as many as the encounter-only data
+          ## b. As many as the encounter-only data
+          sample_unsuithab2n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*2),]
+          
+          ## c. 5x as many as the encounter-only data
           sample_unsuithab5n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*5),]
         }
         
@@ -256,6 +270,7 @@ for(sce in scenarios){ #sce = "OM_1a"
     
     #Combine data sets
     sample_unsuithab1n <- do.call(rbind, sample_unsuithab1n)
+    sample_unsuithab2n <- do.call(rbind, sample_unsuithab2n)
     sample_unsuithab5n <- do.call(rbind, sample_unsuithab5n)
     
     
@@ -281,7 +296,7 @@ for(sce in scenarios){ #sce = "OM_1a"
       to_remove <- unique(to_remove)
       
       #If there is data in that year take a sample, if not no pseudo-absence data for that year
-      if(length(to_remove)>0){
+      if(length(to_remove)>0){#not really needed as we loop over "years_to_sample" so length(to_remove) will always be >0
         
         data_to_sample <- network_to_sample %>% 
           filter(!(child_i %in% to_remove)) %>%
@@ -291,10 +306,14 @@ for(sce in scenarios){ #sce = "OM_1a"
         n <- nrow(Data_sim_unstructured %>% filter(Year == years_to_sample[yr]))
         
         if(n > 0){
-          ## a. As many as the encounter-only data
+          
+          ## a. Half as many as the encounter-only data
           sample_nearroads1n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
           
-          ## b. 5x as many as the encounter-only data
+          ## b. As many as the encounter-only data
+          sample_nearroads2n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*2),]
+          
+          ## c. 5x as many as the encounter-only data
           sample_nearroads5n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*5),]
         }
         
@@ -309,6 +328,7 @@ for(sce in scenarios){ #sce = "OM_1a"
     
     #Combine data sets
     sample_nearroads1n <- do.call(rbind, sample_nearroads1n)
+    sample_nearroads2n <- do.call(rbind, sample_nearroads2n)
     sample_nearroads5n <- do.call(rbind, sample_nearroads5n)
     
     
@@ -335,7 +355,7 @@ for(sce in scenarios){ #sce = "OM_1a"
       to_remove <- unique(to_remove)
       
       #If there is data in that year take a sample, if not no pseudo-absence data for that year
-      if(length(to_remove)>0){
+      if(length(to_remove)>0){#not really needed as we loop over "years_to_sample" so length(to_remove) will always be >0
         
         data_to_sample <- network_to_sample %>% 
           filter(!(child_i %in% to_remove)) %>%
@@ -345,10 +365,14 @@ for(sce in scenarios){ #sce = "OM_1a"
         n <- nrow(Data_sim_unstructured %>% filter(Year == years_to_sample[yr]))
         
         if(n > 0){
-          ## a. As many as the encounter-only data
+          
+          ## a. Half as many as the encounter-only data
           sample_unsuithab_nearroads1n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n),]
           
-          ## b. 5x as many as the encounter-only data
+          ## b. As many as the encounter-only data
+          sample_unsuithab_nearroads2n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*2),]
+          
+          ## c. 5x as many as the encounter-only data
           sample_unsuithab_nearroads5n[[yr]] <- data_to_sample[sample(c(1:nrow(data_to_sample)), n*5),]
         }
         
@@ -363,6 +387,7 @@ for(sce in scenarios){ #sce = "OM_1a"
     
     #Combine data sets
     sample_unsuithab_nearroads1n <- do.call(rbind, sample_unsuithab_nearroads1n)
+    sample_unsuithab_nearroads2n <- do.call(rbind, sample_unsuithab_nearroads2n)
     sample_unsuithab_nearroads5n <- do.call(rbind, sample_unsuithab_nearroads5n)
     
     
@@ -373,12 +398,12 @@ for(sce in scenarios){ #sce = "OM_1a"
     ##########################
     
     # Need to add together Data_sim_df structured data, Data_sim_unstructured, sampled data
-    samples <- c("sample_rand1n", "sample_rand5n",
-                 "sample_unsuithab1n", "sample_unsuithab5n",
-                 "sample_nearroads1n", "sample_nearroads5n",
-                 "sample_unsuithab_nearroads1n", "sample_unsuithab_nearroads5n")
+    samples <- c("sample_rand1n", "sample_rand2n", "sample_rand5n",
+                 "sample_unsuithab1n", "sample_unsuithab2n", "sample_unsuithab5n",
+                 "sample_nearroads1n", "sample_nearroads2n", "sample_nearroads5n",
+                 "sample_unsuithab_nearroads1n", "sample_unsuithab_nearroads2n", "sample_unsuithab_nearroads5n")
     Data_inp_list <- list()
-    for(s in samples){ #s = "sample_rand1n"
+    for(s in samples){ #s = "sample_rand2n"
       dat <- get(s)
       
       Data_inp_list[[s]] <- data.frame("Lon" = c(Data_sim_structured$Lon, Data_sim_unstructured$Lon, dat$Lon),
@@ -397,5 +422,5 @@ for(sce in scenarios){ #sce = "OM_1a"
   }
 
   
-}# Takes about 5mins to run
-
+}# Takes about 30mins to run
+time = Sys.time() - start_time ; print(paste0("Run time: ", time))

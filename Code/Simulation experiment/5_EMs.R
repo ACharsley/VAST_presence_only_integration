@@ -15,6 +15,11 @@ rm(list=ls())
 #  Packages  #
 ##############
 
+#packageurl <- "https://cran.r-project.org/src/contrib/Archive/RANN/RANN_2.6.1.tar.gz" 
+#install.packages(packageurl, repos=NULL, type="source")
+#library(RANN)
+#need to use RANN version 2.6.1 or else there are problems building spatial_list
+
 library(tidyverse)
 library(VAST)
 library(splines)  # Used to include basis-splines
@@ -33,86 +38,44 @@ source(paste0(getwd(), "/Code/funcs.R"))
 #  Modelling scenario  #
 ########################
 
-# For testing:
-#data_sample = "sample_rand1n"
+# Operating models
+scenarios_all <- c("OM_1a", 
+                   "OM_2a", 
+                   "OM_3a", "OM_3b",
+                   "OM_4a")
 
-task_id = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID")) #task_id=1
+# Estimating models
+data_sample_all <- c("sample_rand1n",
+                     "sample_rand2n",
+                     "sample_rand5n",
+                     
+                     "sample_unsuithab1n",
+                     "sample_unsuithab2n",
+                     "sample_unsuithab5n",
+                     
+                     "sample_nearroads1n",
+                     "sample_nearroads2n",
+                     "sample_nearroads5n",
+                     
+                     "sample_unsuithab_nearroads1n",
+                     "sample_unsuithab_nearroads2n",
+                     "sample_unsuithab_nearroads5n")
 
-if(task_id %in% c(1:10)){scenario <- "OM_1a" ; data_sample = "sample_rand1n"}
-if(task_id %in% c(11:20)){scenario <- "OM_1a" ; data_sample = "sample_rand5n"}
-if(task_id %in% c(21:30)){scenario <- "OM_1a" ; data_sample = "sample_unsuithab1n"}
-if(task_id %in% c(31:40)){scenario <- "OM_1a" ; data_sample = "sample_unsuithab5n"}
-if(task_id %in% c(41:50)){scenario <- "OM_1a" ; data_sample = "sample_nearroads1n"}
-if(task_id %in% c(51:60)){scenario <- "OM_1a" ; data_sample = "sample_nearroads5n"}
-if(task_id %in% c(61:70)){scenario <- "OM_1a" ; data_sample = "sample_unsuithab_nearroads1n"}
-if(task_id %in% c(71:80)){scenario <- "OM_1a" ; data_sample = "sample_unsuithab_nearroads5n"}
-
-if(task_id %in% c(81:90)){scenario <- "OM_1b" ; data_sample = "sample_rand1n"}
-if(task_id %in% c(91:100)){scenario <- "OM_1b" ; data_sample = "sample_rand5n"}
-if(task_id %in% c(101:110)){scenario <- "OM_1b" ; data_sample = "sample_unsuithab1n"}
-if(task_id %in% c(111:120)){scenario <- "OM_1b" ; data_sample = "sample_unsuithab5n"}
-if(task_id %in% c(121:130)){scenario <- "OM_1b" ; data_sample = "sample_nearroads1n"}
-if(task_id %in% c(131:140)){scenario <- "OM_1b" ; data_sample = "sample_nearroads5n"}
-if(task_id %in% c(141:150)){scenario <- "OM_1b" ; data_sample = "sample_unsuithab_nearroads1n"}
-if(task_id %in% c(151:160)){scenario <- "OM_1b" ; data_sample = "sample_unsuithab_nearroads5n"}
-
-if(task_id %in% c(161:170)){scenario <- "OM_2a" ; data_sample = "sample_rand1n"}
-if(task_id %in% c(171:180)){scenario <- "OM_2a" ; data_sample = "sample_rand5n"}
-if(task_id %in% c(181:190)){scenario <- "OM_2a" ; data_sample = "sample_unsuithab1n"}
-if(task_id %in% c(191:200)){scenario <- "OM_2a" ; data_sample = "sample_unsuithab5n"}
-if(task_id %in% c(201:210)){scenario <- "OM_2a" ; data_sample = "sample_nearroads1n"}
-if(task_id %in% c(211:220)){scenario <- "OM_2a" ; data_sample = "sample_nearroads5n"}
-if(task_id %in% c(221:230)){scenario <- "OM_2a" ; data_sample = "sample_unsuithab_nearroads1n"}
-if(task_id %in% c(231:240)){scenario <- "OM_2a" ; data_sample = "sample_unsuithab_nearroads5n"}
-
-if(task_id %in% c(241:250)){scenario <- "OM_2b" ; data_sample = "sample_rand1n"}
-if(task_id %in% c(251:260)){scenario <- "OM_2b" ; data_sample = "sample_rand5n"}
-if(task_id %in% c(261:270)){scenario <- "OM_2b" ; data_sample = "sample_unsuithab1n"}
-if(task_id %in% c(271:280)){scenario <- "OM_2b" ; data_sample = "sample_unsuithab5n"}
-if(task_id %in% c(281:290)){scenario <- "OM_2b" ; data_sample = "sample_nearroads1n"}
-if(task_id %in% c(291:300)){scenario <- "OM_2b" ; data_sample = "sample_nearroads5n"}
-if(task_id %in% c(301:310)){scenario <- "OM_2b" ; data_sample = "sample_unsuithab_nearroads1n"}
-if(task_id %in% c(311:320)){scenario <- "OM_2b" ; data_sample = "sample_unsuithab_nearroads5n"}
-
-if(task_id %in% c(321:330)){scenario <- "OM_3a" ; data_sample = "sample_rand1n"}
-if(task_id %in% c(331:340)){scenario <- "OM_3a" ; data_sample = "sample_rand5n"}
-if(task_id %in% c(341:350)){scenario <- "OM_3a" ; data_sample = "sample_unsuithab1n"}
-if(task_id %in% c(351:360)){scenario <- "OM_3a" ; data_sample = "sample_unsuithab5n"}
-if(task_id %in% c(361:370)){scenario <- "OM_3a" ; data_sample = "sample_nearroads1n"}
-if(task_id %in% c(371:380)){scenario <- "OM_3a" ; data_sample = "sample_nearroads5n"}
-if(task_id %in% c(381:390)){scenario <- "OM_3a" ; data_sample = "sample_unsuithab_nearroads1n"}
-if(task_id %in% c(391:400)){scenario <- "OM_3a" ; data_sample = "sample_unsuithab_nearroads5n"}
-
-if(task_id %in% c(401:410)){scenario <- "OM_3b" ; data_sample = "sample_rand1n"}
-if(task_id %in% c(411:420)){scenario <- "OM_3b" ; data_sample = "sample_rand5n"}
-if(task_id %in% c(421:430)){scenario <- "OM_3b" ; data_sample = "sample_unsuithab1n"}
-if(task_id %in% c(431:440)){scenario <- "OM_3b" ; data_sample = "sample_unsuithab5n"}
-if(task_id %in% c(441:450)){scenario <- "OM_3b" ; data_sample = "sample_nearroads1n"}
-if(task_id %in% c(451:460)){scenario <- "OM_3b" ; data_sample = "sample_nearroads5n"}
-if(task_id %in% c(461:470)){scenario <- "OM_3b" ; data_sample = "sample_unsuithab_nearroads1n"}
-if(task_id %in% c(471:480)){scenario <- "OM_3b" ; data_sample = "sample_unsuithab_nearroads5n"}
-
-if(task_id %in% c(481:490)){scenario <- "OM_4a" ; data_sample = "sample_rand1n"}
-if(task_id %in% c(491:500)){scenario <- "OM_4a" ; data_sample = "sample_rand5n"}
-if(task_id %in% c(501:510)){scenario <- "OM_4a" ; data_sample = "sample_unsuithab1n"}
-if(task_id %in% c(511:520)){scenario <- "OM_4a" ; data_sample = "sample_unsuithab5n"}
-if(task_id %in% c(521:530)){scenario <- "OM_4a" ; data_sample = "sample_nearroads1n"}
-if(task_id %in% c(531:540)){scenario <- "OM_4a" ; data_sample = "sample_nearroads5n"}
-if(task_id %in% c(541:550)){scenario <- "OM_4a" ; data_sample = "sample_unsuithab_nearroads1n"}
-if(task_id %in% c(551:560)){scenario <- "OM_4a" ; data_sample = "sample_unsuithab_nearroads5n"}
-
-if(task_id %in% c(561:570)){scenario <- "OM_4b" ; data_sample = "sample_rand1n"}
-if(task_id %in% c(571:580)){scenario <- "OM_4b" ; data_sample = "sample_rand5n"}
-if(task_id %in% c(581:590)){scenario <- "OM_4b" ; data_sample = "sample_unsuithab1n"}
-if(task_id %in% c(591:600)){scenario <- "OM_4b" ; data_sample = "sample_unsuithab5n"}
-if(task_id %in% c(601:610)){scenario <- "OM_4b" ; data_sample = "sample_nearroads1n"}
-if(task_id %in% c(611:620)){scenario <- "OM_4b" ; data_sample = "sample_nearroads5n"}
-if(task_id %in% c(621:630)){scenario <- "OM_4b" ; data_sample = "sample_unsuithab_nearroads1n"}
-if(task_id %in% c(631:640)){scenario <- "OM_4b" ; data_sample = "sample_unsuithab_nearroads5n"}
+# Replications
+reps_all <- c(1:100)
 
 
-rep <- task_id %% 10
-if(rep == 0) rep <- 10
+tasks <- data.frame("scenarios_all" = rep(scenarios_all, each = length(data_sample_all)*length(reps_all)),
+                    "data_sample_all" = rep(rep(data_sample_all, each = length(reps_all)), length(scenarios_all)),
+                    "reps_all" = rep(reps_all, length(scenarios_all)*length(data_sample_all)))
+# nrow(unique(tasks)) == length(scenarios_all)*length(data_sample_all)*length(reps_all)
+
+task_id = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID")) #task_id=675
+
+# set scenario, data_sample, and rep
+scenario <- tasks[task_id,"scenarios_all"] ; print(scenario)
+data_sample <- tasks[task_id,"data_sample_all"] ; print(data_sample)
+rep <- tasks[task_id,"reps_all"] ; print(rep)
 
 
 
@@ -172,25 +135,25 @@ Data_inp <- EM_data_list[[data_sample]]
 table(Data_inp$Data_source)
 
 
-## Plot catchment data ##
-plotting_data <- Data_inp %>%
-  mutate("Present" = ifelse(round(Catch_KG) == 1, "Present", "Absent"))
-
-catchmap <- ggplot(plotting_data) +
-  geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
-  geom_point(aes(x = Lon, y = Lat, col = Present), alpha = 0.8, size=3) +
-  facet_wrap(.~Year) +
-  xlab("Longitude (°E)") + ylab("Latitude (°N)") +
-  #ggtitle("Longfin eel data by year") +
-  guides(color = guide_legend(title = "")) +
-  scale_colour_manual(values = c("#E41A1C", "chartreuse4")) +
-  theme_bw(base_size = 14) +
-  theme(axis.text = element_text(size = rel(1.25)),
-        axis.title=element_text(size = rel(1.5),face="bold"),
-        axis.text.x = element_text(angle = 90),
-        legend.text=element_text(size = rel(1)))
-ggsave(file.path(path, paste0("Catchment_data_map_rep",rep,"_",data_sample,".png")), catchmap, height = 12, width = 15)
-####
+# ## Plot catchment data ##
+# plotting_data <- Data_inp %>%
+#   mutate("Present" = ifelse(round(Catch_KG) == 1, "Present", "Absent"))
+# 
+# catchmap <- ggplot(plotting_data) +
+#   geom_point(data = network, aes(x = Lon, y = Lat), col = "gray") +
+#   geom_point(aes(x = Lon, y = Lat, col = Present), alpha = 0.8, size=3) +
+#   facet_wrap(.~Year) +
+#   xlab("Longitude (°E)") + ylab("Latitude (°N)") +
+#   #ggtitle("Longfin eel data by year") +
+#   guides(color = guide_legend(title = "")) +
+#   scale_colour_manual(values = c("#E41A1C", "chartreuse4")) +
+#   theme_bw(base_size = 14) +
+#   theme(axis.text = element_text(size = rel(1.25)),
+#         axis.title=element_text(size = rel(1.5),face="bold"),
+#         axis.text.x = element_text(angle = 90),
+#         legend.text=element_text(size = rel(1)))
+# ggsave(file.path(path, paste0("Catchment_data_map_rep",rep,"_",data_sample,".png")), catchmap, height = 12, width = 15)
+# ####
 
 
 
@@ -230,9 +193,11 @@ ObsModel <- Fit$settings$ObsModel ; print(ObsModel)
 OverdispersionConfig <- Fit$settings$OverdispersionConfig ; print(OverdispersionConfig)
 Options <- Fit$settings$Options ; print(Options)
 
-bias_correct = T
-bias_correct_control = list( sd = FALSE, split = NULL, nsplit = 1, vars_to_correct = c( "Index_cyl", "Index_ctl" ) )
-
+## Turn off bias correction to minimise run time
+# bias_correct = T
+# bias_correct_control = list( sd = FALSE, split = NULL, nsplit = 1, vars_to_correct = c( "Index_cyl", "Index_ctl" ) )
+bias_correct = F
+bias_correct_control = list( sd = FALSE, split = NULL, nsplit = NULL, vars_to_correct = NULL)
 
 # Make settings - this isn't required but will do for saving later
 settings <- make_settings(n_x = nrow(Network_sz),
@@ -371,77 +336,48 @@ time = Sys.time() - start_time ; print(paste0("Model run time: ", time))
 
 
 
-####################################
-# Save important model information #
-####################################
+######################################
+# Calculate probability of encounter #
+######################################
 
-Save = list( "Opt" = Opt, "Report" = Report, "ParHat" = Obj$env$parList( Opt$par ), "TmbData" = TmbData )
-save(Save, file = file.path(path, "Save.RData"))
-
-model_data <- Data_inp %>%
-  select(Lat, Lon, Catch_KG, Year) %>%
-  rename("Lat_i" = "Lat", "Lon_i" = "Lon", "b_i" = "Catch_KG", "t_i" = "Year") %>%
-  mutate("a_i" = rep(1,nrow(Data_inp)), "v_i" = rep(0,nrow(Data_inp)),
-         "c_iz" = rep(0,nrow(Data_inp))) %>%
-  relocate("Lat_i", "Lon_i", "a_i", "v_i", "b_i", "t_i", "c_iz")
-
-
-## Always double check this before running
-Fit <- list( "data_frame" = model_data,
-             "extrapolation_list" = Extrapolation_List,
-             "spatial_list" = Spatial_List,
-             "data_list" = TmbData,
-             "tmb_list" = TmbList,
-             "parameter_estimates" = Opt,
-             "Report" = Report,
-             "ParHat" = Obj$env$parList( Opt$par ),
-             "year_labels" = c(min(model_data$t_i):max(model_data$t_i)),
-             "years_to_plot" = which(c(min(model_data$t_i):max(model_data$t_i)) %in% unique(model_data$t_i)),
-             "category_names" = NA,
-             "settings" = settings,
-             #"input_args" = input_args,
-             #"X1config_cp" = X1config_inp,
-             #"X2config_cp" = X2config_inp,
-             #"X_gctp" = X_gctp,
-             #"X_itp" = X_itp,
-             "covariate_data" = covariate_df,
-             "X1_gctp" = TmbData$X1_gctp,
-             #"X2_gctp" = TmbData$X2_gctp, #No affect on 2nd linear predictor
-             #"X1_formula" = X1_formula_inp,
-             #"X2_formula" = X2_formula_inp,
-             "Q1config_k" = Q1config_k,
-             "Q2config_k" = Q2config_k,
-             "catchability_data" = catchability_data,
-             "Q1_formula" = Q1_formula,
-             "Q2_formula" = Q2_formula,
-             "total_time" = time)
-
-#save(Fit, file = file.path(path, "Fit.RData"))
-#load(file.path(path, "Fit.RData"))
-
-
-# Extract probability of encounter data
+## Probability of encounter
 Probability_of_encounter<- matrix(Report$R1_gct, nrow = dim(Report$R1_gct)[1], ncol = dim(Report$R1_gct)[3],
-                                  dimnames = list(Network_sz_LL$child_s, min(Fit$year_labels):max(Fit$year_labels)))
-save(Probability_of_encounter, file = file.path(path, "Probability_of_encounter.RData"))
-#load(file.path(path, "Probability_of_encounter.RData"))
+                                  dimnames = list(Network_sz_LL$child_s, min(Data_inp$Year):max(Data_inp$Year)))
+
+## Probability of encounter standard error - takes about 4 mins to run
+n_samples <- 100
+samples <- sample_variable( Sdreport = Opt$SD, 
+                            Obj = Obj, 
+                            variable_name = "R1_gct", 
+                            n_samples = n_samples, 
+                            seed = sample(1:1000,1))
+
+# POE_SE <- matrix(nrow = n_samples, ncol = dim(Report$R1_gct)[3],
+#                  dimnames = list(c(1:n_samples), min(Data_inp$Year):max(Data_inp$Year)))
+# 
+# for(x in 1:n_samples){
+#   POE_SE[x,] <- apply(samples[,1,,x],2,sd)
+#   }
+# POE_SE <- colMeans(POE_SE)
+
+POE_SE <- matrix(nrow = dim(Report$R1_gct)[1], ncol = dim(Report$R1_gct)[3],
+                 dimnames = list(Network_sz_LL$child_s, min(Data_inp$Year):max(Data_inp$Year)))
+
+for(x in 1:dim(Report$R1_gct)[3]){
+  POE_SE[,x] <- apply(samples[,1,x,],1,sd)
+}
 
 
 
-#######################################
-# Percentage of river length occupied #
-#######################################
+###################
+# Save POE output #
+###################
 
-Effective_area <- plot_range_index_SN(Sdreport = Fit$parameter_estimates$SD,
-                                      Report = Fit$Report,
-                                      TmbData = Fit$data_list,
-                                      year_labels = as.numeric(Fit$year_labels),
-                                      Znames = colnames(Fit$data_list$Z_gm),
-                                      PlotDir = path,
-                                      use_biascorr = TRUE,
-                                      category_names = "",
-                                      total_river_length = (sum(network$length)))
-saveRDS(Effective_area, file.path(path, paste0("Effective_area.rds")))
+# Save probability of encounter data
+POE_list <- list("Probability_of_encounter" = Probability_of_encounter, "SE" = POE_SE)
+
+save(POE_list, file = file.path(path, "POE_list.RData"))
+#load(file.path(path, "POE_list.RData"))
 
 
 

@@ -1283,3 +1283,13 @@ wrapper <- function(x, ...)
 {
   paste(strwrap(x, ...), collapse = "\n")
 }
+
+
+
+#################################
+# Performance metrics functions #
+#################################
+
+logit <- function(p){log(p/(1-p))}
+
+

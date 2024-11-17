@@ -17,6 +17,11 @@ rm(list=ls())
 #  Packages  #
 ##############
 
+#packageurl <- "https://cran.r-project.org/src/contrib/Archive/RANN/RANN_2.6.1.tar.gz" 
+#install.packages(packageurl, repos=NULL, type="source")
+#library(RANN)
+#need to use RANN version 2.6.1 or else there are problems building spatial_list
+
 library(plyr)
 library(tidyverse)
 library(VAST)
@@ -46,7 +51,7 @@ source(paste0(getwd(), "/Code/funcs.R"))
 ########################
 
 inputArgs <- commandArgs(trailingOnly=TRUE) #inputArgs <- c("NA", "SE_off") #inputArgs <- c"NA", "SE_off")
-rerun <- inputArgs[1] ; print(rerun)
+rerun <- inputArgs[1] ; print(rerun) # "NA" or "YES"
 SE_switch <- inputArgs[2] ; print(SE_switch) #SE_off, SE_on
 
 
@@ -216,13 +221,6 @@ Spatial_List = make_spatial_info(n_x = nrow(Network_sz),
                                  Save_Results = TRUE)
 
 
-# ## Plot data and knots 
-# plot_data(Extrapolation_List = Extrapolation_List, 
-#           Spatial_List = Spatial_List, 
-#           Data_Geostat = Data_inp,
-#           PlotDir = paste0(path_figs, "/")) 
-
-
 
 ########################
 # Build the TMB object #
@@ -307,11 +305,56 @@ Opt = TMBhelper::fit_tmb(obj = Obj,
                          getsd = TRUE, 
                          savedir = path, 
                          bias.correct = bias_correct, 
-                         newtonsteps = 3, 
+                         newtonsteps = 5, 
                          bias.correct.control = bias_correct_control, 
                          getJointPrecision = TRUE) 
 Report = Obj$report()
 time = Sys.time() - start_time ; print(paste0("Model run time: ", time))
+
+
+
+######################################
+# Calculate probability of encounter #
+######################################
+
+## Probability of encounter
+Probability_of_encounter<- matrix(Report$R1_gct, nrow = dim(Report$R1_gct)[1], ncol = dim(Report$R1_gct)[3],
+                                  dimnames = list(Network_sz_LL$child_s, min(Data_inp$Year):max(Data_inp$Year)))
+
+## Probability of encounter standard error - takes about 4 mins to run
+n_samples <- 100
+samples <- sample_variable( Sdreport = Opt$SD, 
+                            Obj = Obj, 
+                            variable_name = "R1_gct", 
+                            n_samples = n_samples, 
+                            seed = sample(1:1000,1))
+
+# POE_SE <- matrix(nrow = n_samples, ncol = dim(Report$R1_gct)[3],
+#                  dimnames = list(c(1:n_samples), min(Data_inp$Year):max(Data_inp$Year)))
+# 
+# for(x in 1:n_samples){
+#   POE_SE[x,] <- apply(samples[,1,,x],2,sd)
+# }
+# POE_SE <- colMeans(POE_SE)
+
+POE_SE <- matrix(nrow = dim(Report$R1_gct)[1], ncol = dim(Report$R1_gct)[3],
+                 dimnames = list(Network_sz_LL$child_s, min(Data_inp$Year):max(Data_inp$Year)))
+
+for(x in 1:dim(Report$R1_gct)[3]){
+  POE_SE[,x] <- apply(samples[,1,x,],1,sd)
+}
+
+
+
+###################
+# Save POE output #
+###################
+
+# Save probability of encounter data
+POE_list <- list("Probability_of_encounter" = Probability_of_encounter, "SE" = POE_SE)
+
+save(POE_list, file = file.path(path, "POE_list.RData"))
+#load(file.path(path, "POE_list.RData"))
 
 
 
@@ -362,13 +405,6 @@ Fit <- list( "data_frame" = model_data,
 
 save(Fit, file = file.path(path, "Fit.RData"))
 #load(file.path(path, "Fit.RData"))
-
-
-# Extract probability of encounter data
-Probability_of_encounter<- matrix(Report$R1_gct, nrow = dim(Report$R1_gct)[1], ncol = dim(Report$R1_gct)[3],
-                                  dimnames = list(Network_sz_LL$child_s, min(Fit$year_labels):max(Fit$year_labels)))
-save(Probability_of_encounter, file = file.path(path, "Probability_of_encounter.RData"))
-#load(file.path(path, "Probability_of_encounter.RData"))
 
 
 
@@ -451,21 +487,18 @@ dev.off()
 
 
 
-##########################
-# Simulate data if an OM #
-##########################
+#################
+# Simulate data #
+#################
 
 path_sim_data <- file.path(path, "Simulated_data")
 dir.create(path_sim_data, showWarnings = F)
 
-Nrep <- 10
-pgBar <- txtProgressBar( min = 1, max = Nrep, style = 3 )
+Nrep <- 100
 for(rI in 1:Nrep){
-  setTxtProgressBar( pgBar, rI )
   Data_sim <- Obj$simulate( complete = TRUE )
   saveRDS(Data_sim, file.path(path_sim_data, paste0("Data_sim_", rI, ".rds")))
 }
-close(pgBar)
 
 
 
@@ -473,36 +506,36 @@ close(pgBar)
 # Plot probability of encounter #
 #################################
 
-## Yearly
-plot_maps_network(plot_set = c(1), 
-                  fit = Fit, 
-                  Sdreport = Fit$parameter_estimates$SD, 
-                  TmbData = Fit$data_list, 
-                  spatial_list = Fit$spatial_list, 
-                  DirName = path_figs, 
-                  Panel = "category", 
-                  PlotName = "POE_lf_yearly",
-                  PlotTitle = "Longfin eel yearly probability of encounter in Taranaki, NZ",
-                  cex = 0.5, 
-                  Zlim = c(0,1), 
-                  arrows=T, 
-                  pch=15)
-
-
-## Across time
-plot_maps_network(plot_set = c(1), 
-                  fit = Fit, 
-                  Sdreport = Fit$parameter_estimates$SD, 
-                  TmbData = Fit$data_list, 
-                  spatial_list = Fit$spatial_list, 
-                  DirName = path_figs, 
-                  Panel = "Year", 
-                  PlotName = "POE_lf",
-                  PlotTitle = "Longfin eel yearly P.O.E in Taranaki, NZ",
-                  cex = 0.75, 
-                  Zlim = c(0,1), 
-                  arrows=T, 
-                  pch=15)
+# ## Yearly
+# plot_maps_network(plot_set = c(1), 
+#                   fit = Fit, 
+#                   Sdreport = Fit$parameter_estimates$SD, 
+#                   TmbData = Fit$data_list, 
+#                   spatial_list = Fit$spatial_list, 
+#                   DirName = path_figs, 
+#                   Panel = "category", 
+#                   PlotName = "POE_lf_yearly",
+#                   PlotTitle = "Longfin eel yearly probability of encounter in Taranaki, NZ",
+#                   cex = 0.5, 
+#                   Zlim = c(0,1), 
+#                   arrows=T, 
+#                   pch=15)
+# 
+# 
+# ## Across time
+# plot_maps_network(plot_set = c(1), 
+#                   fit = Fit, 
+#                   Sdreport = Fit$parameter_estimates$SD, 
+#                   TmbData = Fit$data_list, 
+#                   spatial_list = Fit$spatial_list, 
+#                   DirName = path_figs, 
+#                   Panel = "Year", 
+#                   PlotName = "POE_lf",
+#                   PlotTitle = "Longfin eel yearly P.O.E in Taranaki, NZ",
+#                   cex = 0.75, 
+#                   Zlim = c(0,1), 
+#                   arrows=T, 
+#                   pch=15)
 
 
 # Without titles and with zlimit changed

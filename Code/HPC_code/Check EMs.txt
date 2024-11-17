@@ -1,0 +1,49 @@
+1. Ensure EMs have run to path /Models/EMs/
+
+2. Ensure 6_Check_EMs.R is in /Code/ folder
+
+cd /nesi/nobackup/niwa03825/ACharsley/VAST_presence_only_integration
+
+nano Check_EMs.sl
+
+######## In sl script write the following:
+
+#!/bin/bash -e
+#SBATCH --job-name=Check_EMs # job name (shows up in the queue)
+#SBATCH --account=niwa03825  #niwa03825 (Toitu Nga Taonga Waimaori) or niwa03347 (Population modelling group)
+#SBATCH --time=00:01:00      # Walltime (HH:MM:SS)
+#SBATCH --mem=32000MB          # Memory in MB - trying 100 GB at first
+#SBATCH --cpus-per-task=2                # better throughput with 2
+#SBATCH --mail-user=Anthony.Charsley@niwa.co.nz
+#SBATCH --mail-type=ALL
+#SBATCH --output=Check_EMs.out # Include the job ID in the names of
+#SBATCH --error=Check_EMs.err # the output and error files
+
+
+taskset -c -p $$          #Prints which CPUs it can use
+module purge #clears any potential environment issues
+module load  R-Geo/4.2.1-gimkl-2022a
+
+# Help R to flush errors and show overall job progress by printing
+# "executing" and "finished" statements.
+echo "Executing R ..."
+Rscript /nesi/nobackup/niwa03825/ACharsley/VAST_presence_only_integration/Code/6_Check_EMs.R
+echo "R finished."
+
+
+############## Press ctrl+x and save as Check_EMs.sl
+
+sbatch Check_EMs.sl
+
+###### Check queue
+
+squeue -u charsleyar
+
+#### If I need to cancel
+
+scancel JOBID
+
+
+#### To check job efficiency
+
+nn_seff JOBID

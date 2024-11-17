@@ -153,7 +153,7 @@ for(scenario in sce){
       #Load data input
       Data_inp_new <- readRDS(file.path(path_cv_k, paste0("Data_input.rds")))
       
-      #Save fit to out-of-bag data - not sure this works so testing here
+      #Save fit to out-of-bag data
       cv_list$prednll_f[[i]] = Save_new$Report$pred_jnll
       
       

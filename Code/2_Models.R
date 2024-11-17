@@ -14,12 +14,20 @@ rm(list=ls())
 #  Packages  #
 ##############
 
+#packageurl <- "https://cran.r-project.org/src/contrib/Archive/RANN/RANN_2.6.1.tar.gz" 
+#install.packages(packageurl, repos=NULL, type="source")
+#library(RANN)
+#need to use RANN version 2.6.1 or else there are problems building spatial_list
+
+
 library(plyr)
 library(tidyverse)
 library(VAST)
 library(splines)  # Used to include basis-splines
 #library(effects)  # Used to visualize covariate effects
 library(DHARMa)
+
+
 
 
 
@@ -233,6 +241,7 @@ if(!is.na(rerun)){
 
 
 ObsModel <- c(2,0)
+#ObsModel <- c(13,1)
 OverdispersionConfig <- c("Eta1" = 0, "Eta2" = 0)
 
 if(SE_switch == "SE_off"){

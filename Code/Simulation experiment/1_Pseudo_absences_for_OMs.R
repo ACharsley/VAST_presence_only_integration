@@ -136,7 +136,7 @@ for(i in c(1:length(years_to_sample))){
   
   #I'm looping over years of data from the presence-only data (years_to_sample). 
   #So, if there is data in that year, take a sample, if not no pseudo-absence data for that year.
-  if(length(to_remove)>0){
+  if(length(to_remove)>0){ #not really needed as we loop over "years_to_sample" so length(to_remove) will always be >0
     
     data_to_sample <- network_to_sample %>% 
       filter(!(child_i %in% to_remove)) %>%
@@ -214,7 +214,7 @@ for(i in c(1:length(years_to_sample))){
   
   #I'm looping over years of data from the presence-only data (years_to_sample). 
   #So, if there is data in that year, take a sample, if not no pseudo-absence data for that year.
-  if(length(to_remove)>0){
+  if(length(to_remove)>0){#not really needed as we loop over "years_to_sample" so length(to_remove) will always be >0
     
     data_to_sample <- network_to_sample %>% 
       filter(!(child_i %in% to_remove)) %>%
@@ -290,7 +290,7 @@ for(i in c(1:length(years_to_sample))){
   
   #I'm looping over years of data from the presence-only data (years_to_sample). 
   #So, if there is data in that year, take a sample, if not no pseudo-absence data for that year.
-  if(length(to_remove)>0){
+  if(length(to_remove)>0){#not really needed as we loop over "years_to_sample" so length(to_remove) will always be >0
     
     data_to_sample <- network_to_sample %>% 
       filter(!(child_i %in% to_remove)) %>%
@@ -359,7 +359,7 @@ for(i in c(1:length(years_to_sample))){
   
   #I'm looping over years of data from the presence-only data (years_to_sample). 
   #So, if there is data in that year, take a sample, if not no pseudo-absence data for that year.
-  if(length(to_remove)>0){
+  if(length(to_remove)>0){#not really needed as we loop over "years_to_sample" so length(to_remove) will always be >0
     
     data_to_sample <- network_to_sample %>% 
       filter(!(child_i %in% to_remove)) %>%

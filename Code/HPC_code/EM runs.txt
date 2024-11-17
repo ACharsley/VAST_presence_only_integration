@@ -21,14 +21,14 @@ nano VAST_EMs.sl
 #!/bin/bash -e
 #SBATCH --job-name=VAST_EMs # job name (shows up in the queue)
 #SBATCH --account=niwa03825  #niwa03825 (Toitu Nga Taonga Waimaori) or niwa03347 (Population modelling group)
-#SBATCH --time=3:00:00      # Walltime (HH:MM:SS)
-#SBATCH --mem=32000MB          # Memory in MB - trying 100 GB at first
-#SBATCH --cpus-per-task=3                # test using 2 then 4 and see if the speed increases, if not R
+#SBATCH --time=2:30:00      # Walltime (HH:MM:SS)
+#SBATCH --mem=32000MB          # Memory in MB
+#SBATCH --cpus-per-task=2                # better throughput with 2
 #SBATCH --mail-user=Anthony.Charsley@niwa.co.nz
 #SBATCH --mail-type=ALL
 #SBATCH --output=VAST_EMs_%a.%j.out # Include the job ID in the names of
 #SBATCH --error=VAST_EMs_%a.%j.err # the output and error files
-#SBATCH --array=1-80,161-240,321-640                     # Array jobs
+#SBATCH --array=1-6000                     # Array jobs
 
 
 taskset -c -p $$          #Prints which CPUs it can use
@@ -42,7 +42,7 @@ module load  R-Geo/4.2.1-gimkl-2022a
 # Help R to flush errors and show overall job progress by printing
 # "executing" and "finished" statements.
 echo "Executing R ..."
-srun Rscript /nesi/nobackup/niwa03825/ACharsley/VAST_presence_only_integration/Code/5_EMs.R
+Rscript /nesi/nobackup/niwa03825/ACharsley/VAST_presence_only_integration/Code/5_EMs.R 
 echo "R finished."
 
 
