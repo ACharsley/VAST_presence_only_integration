@@ -46,6 +46,9 @@ network <- network %>% filter(parent_s!=0, FWENZ_isLake!=TRUE)
 #Lakes follow a different process so best to leave these areas for spatial interpolation and remove later
 #if necessary.
 
+##NZFFD encounter/non-encounter data
+NZFFD_data <- readRDS(file.path(data_taranaki_dir, "Taranaki_NZFFD_ene_data.rds"))
+
 ##encounter-only data
 encounter_only_lf_data <- readRDS(file.path(data_taranaki_dir, "Taranaki_encounter_only_lf_data.rds"))
 
@@ -81,8 +84,10 @@ summary(network_SF$distance_to_road/1000)
 network_SF$distance_to_road_km <- drop_units(network_SF$distance_to_road)/1000
 
 
+
 network_for_plot <- network_SF %>% 
-  select(c("child_s", "parent_s", "distance_to_road_km")) %>%
+  select(c("child_s", "parent_s", "distance_to_road_km")) %>% 
+  mutate("Data" = "All distances") %>%
   rename("child_i" = "child_s",
          "parent_i" = "parent_s")
 
@@ -92,8 +97,8 @@ summary(presence_only_sample_bias$distance_to_road_km)
 
 dist_to_road_presenceonly_hist <- ggplot(presence_only_sample_bias, aes(x=distance_to_road_km)) +
   geom_histogram(binwidth = 0.1, boundary = 0)  +
-  scale_x_continuous(breaks = seq(0,35,by=2)/10) +
-  scale_y_continuous(breaks = seq(0,180,by=20)) +
+  scale_x_continuous(breaks = seq(0,35,by=2)/10,expand = c(0, 0)) +
+  scale_y_continuous(breaks = seq(0,180,by=20),expand = c(0, 0)) +
   #geom_vline(xintercept = median(presence_only_sample_bias$distance_to_road_km)) +
   #geom_vline(xintercept = mean(presence_only_sample_bias$distance_to_road_km)) +
   #ggtitle("Distance to road (km) of unstructured data") +
@@ -111,5 +116,48 @@ summary(presence_only_sample_bias$distance_to_road_km)
 #########
 
 
+## Cumulative distribution ##
 
+## Presence-only + all dists
+data_presence_only_dists <- presence_only_sample_bias  %>% 
+  select(c("child_i", "parent_i", "distance_to_road_km")) %>%
+  mutate("Data" = "Presence-only data distances") 
 
+data_all_dists <- rbind(network_for_plot, data_presence_only_dists)
+
+ecdf_all_dists <- ggplot(data_all_dists, aes(x=distance_to_road_km, colour=Data)) +
+  stat_ecdf(linewidth = 1.5) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  xlab("Distance to road (km)") + ylab("Cumulative probability") +
+  theme(axis.text = element_text(size = rel(1.5)),
+        axis.title=element_text(size = rel(1.5),face="bold"),
+        axis.text.x = element_text(size = rel(1)),
+        axis.text.y = element_text(size = rel(1)),
+        legend.position = c(0.8, 0.2),
+        legend.title = element_blank(),
+        legend.text = element_text(size=rel(1.5)))
+ggsave(file.path(fig_dir, "ecdf_dist_to_road.png"), ecdf_all_dists, height = 12, width = 15)
+
+## Presence-only + presence/absence + all dists
+
+data_struc_dists <- right_join(network_for_plot, NZFFD_data)
+data_struc_dists <- data_struc_dists   %>% 
+  select(c("child_i", "parent_i", "distance_to_road_km")) %>%
+  mutate("Data" = "Structured data distances") 
+
+data_all_dists2 <- rbind(network_for_plot, data_presence_only_dists, data_struc_dists)
+
+ecdf_all_dists_w_struc_data <- ggplot(data_all_dists2, aes(x=distance_to_road_km, colour=Data)) +
+  stat_ecdf(linewidth = 1.5) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  xlab("Distance to road (km)") + ylab("Cumulative probability") +
+  theme(axis.text = element_text(size = rel(1.5)),
+        axis.title=element_text(size = rel(1.5),face="bold"),
+        axis.text.x = element_text(size = rel(1)),
+        axis.text.y = element_text(size = rel(1)),
+        legend.position = c(0.8, 0.2),
+        legend.title = element_blank(),
+        legend.text = element_text(size=rel(1.5)))
+ggsave(file.path(fig_dir, "ecdf_dist_to_road_w_struc_data.png"), ecdf_all_dists_w_struc_data, height = 12, width = 15)

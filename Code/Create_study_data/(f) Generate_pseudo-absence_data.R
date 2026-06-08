@@ -480,7 +480,7 @@ saveRDS(sample_2d, file.path(pseudoabsence_data_dir, "Sample_2d.rds"))
 ####
 
 
-## Save randomly generated data at locations within 2km of a registered road ##
+## Save randomly generated data at locations within 500m of a registered road ##
 #a.
 saveRDS(sample_3a, file.path(pseudoabsence_data_dir, "Sample_3a.rds"))
 
@@ -495,7 +495,7 @@ saveRDS(sample_3d, file.path(pseudoabsence_data_dir, "Sample_3d.rds"))
 ####
 
 
-## Save randomly generated data at locations within 2km of a registered road and with unsuitable longfin eel habitat ##
+## Save randomly generated data at locations within 500m of a registered road and with unsuitable longfin eel habitat ##
 #a.
 saveRDS(sample_4a, file.path(pseudoabsence_data_dir, "Sample_4a.rds"))
 
